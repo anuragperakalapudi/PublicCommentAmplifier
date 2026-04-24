@@ -27,7 +27,7 @@ export function FeedHeader() {
             className="w-full rounded-full border border-rule bg-paper px-10 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
           />
           <span className="absolute right-3 hidden text-[10px] uppercase tracking-widest text-muted md:inline">
-            Demo · Visual only
+            
           </span>
         </div>
         <Link

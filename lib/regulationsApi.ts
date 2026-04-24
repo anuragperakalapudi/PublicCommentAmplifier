@@ -30,17 +30,43 @@ export function agencyDisplayName(agencyId: string): string {
   return AGENCY_NAMES[agencyId] ?? agencyId;
 }
 
-export function buildRegulationsUrl(topics: Topic[]): string {
+export function buildRegulationsUrl(): string {
+  // Note: we deliberately don't apply filter[searchTerm] — the v4 API does
+  // strict whole-word matching on it, which excludes most real documents
+  // (e.g., "healthcare" returns 0 rules even when "health" returns 10).
+  // Instead we pull a broad pool of currently-open Proposed Rules and rank
+  // them client-side via keyword overlap against the user's topics.
   const params = new URLSearchParams();
-  if (topics.length > 0) {
-    params.set("filter[searchTerm]", topics.join(" ").toLowerCase());
-  }
   params.set("filter[documentType]", "Proposed Rule");
   params.set("filter[commentEndDate][ge]", new Date().toISOString().slice(0, 10));
   params.set("sort", "-postedDate");
-  params.set("page[size]", "20");
+  params.set("page[size]", "250");
   return `https://api.regulations.gov/v4/documents?${params.toString()}`;
 }
+
+const AGENCY_TO_TOPICS: Record<string, Topic[]> = {
+  CMS: ["Healthcare"],
+  HHS: ["Healthcare", "Disability"],
+  DOL: ["Labor"],
+  OSHA: ["Labor", "Healthcare"],
+  NLRB: ["Labor"],
+  EEOC: ["Labor"],
+  HUD: ["Housing"],
+  EPA: ["Environment"],
+  PHMSA: ["Environment"],
+  DOE: ["Environment"],
+  NRC: ["Environment"],
+  USDA: ["Environment", "Small Business"],
+  ED: ["Education"],
+  VA: ["Veterans", "Healthcare"],
+  SBA: ["Small Business"],
+  USCIS: ["Immigration"],
+  ICE: ["Immigration"],
+  DHS: ["Immigration"],
+  EOIR: ["Immigration"],
+  ACL: ["Disability"],
+  SSA: ["Disability"],
+};
 
 interface RegulationsApiAttributes {
   agencyId?: string;
@@ -49,6 +75,8 @@ interface RegulationsApiAttributes {
   documentType?: string;
   postedDate?: string;
   commentEndDate?: string | null;
+  withdrawn?: boolean;
+  openForComment?: boolean;
 }
 
 interface RegulationsApiItem {
@@ -56,38 +84,49 @@ interface RegulationsApiItem {
   attributes?: RegulationsApiAttributes;
 }
 
+const ALL_TOPICS_LIST: Topic[] = [
+  "Healthcare", "Housing", "Labor", "Disability", "Immigration",
+  "Environment", "Education", "Veterans", "Small Business",
+];
+
+const TOPIC_KEYWORDS: Record<Topic, string[]> = {
+  Healthcare: ["health", "medicare", "medicaid", "drug", "hospital", "clinic", "patient", "insurance", "telehealth"],
+  Housing: ["housing", "voucher", "tenant", "landlord", "rent", "homeless", "mortgage"],
+  Labor: ["labor", "worker", "wage", "overtime", "employer", "employee", "workplace", "workforce"],
+  Disability: ["disability", "accessib", "caregiver", "long-term care"],
+  Immigration: ["immigration", "visa", "asylum", "refugee", "naturalization", "border"],
+  Environment: ["environment", "pollution", "emission", "climate", "drinking water", "wildlife", "pipeline", "energy", "wetland"],
+  Education: ["education", "student", "school", "college", "university", "borrower", "tuition"],
+  Veterans: ["veteran", "service member", "gi bill", "military"],
+  "Small Business": ["small business", "microloan", "entrepreneur", "self-employed", "minority business"],
+};
+
 export function mapApiResponse(
   items: RegulationsApiItem[],
-  topics: Topic[],
+  _topics: Topic[],
 ): Regulation[] {
-  const lowerTopics = topics.map((t) => t.toLowerCase());
   return items
     .filter((it) => it && it.id && it.attributes)
+    .filter((it) => !it.attributes!.withdrawn)
     .map((it) => {
       const a = it.attributes!;
       const title = a.title ?? "Untitled regulation";
       const summary =
         (a.docAbstract && a.docAbstract.trim()) ||
         truncate(title, 240);
-      const inferredTopics: Topic[] = [];
       const text = `${title} ${a.docAbstract ?? ""}`.toLowerCase();
-      const allTopics: Topic[] = [
-        "Healthcare", "Housing", "Labor", "Disability", "Immigration",
-        "Environment", "Education", "Veterans", "Small Business",
-      ];
-      for (const t of allTopics) {
-        if (text.includes(t.toLowerCase())) inferredTopics.push(t);
+      const agencyId = a.agencyId ?? "—";
+
+      const inferredTopics = new Set<Topic>(AGENCY_TO_TOPICS[agencyId] ?? []);
+      for (const topic of ALL_TOPICS_LIST) {
+        const keywords = TOPIC_KEYWORDS[topic];
+        if (keywords.some((k) => text.includes(k))) inferredTopics.add(topic);
       }
-      // Always include at least the user-selected topics that hit
-      for (const t of topics) {
-        if (text.includes(t.toLowerCase()) && !inferredTopics.includes(t)) {
-          inferredTopics.push(t);
-        }
-      }
+
       return {
         id: it.id,
-        agencyId: a.agencyId ?? "—",
-        agencyName: agencyDisplayName(a.agencyId ?? "—"),
+        agencyId,
+        agencyName: agencyDisplayName(agencyId),
         title,
         summary,
         documentType: a.documentType ?? "Proposed Rule",
@@ -95,7 +134,7 @@ export function mapApiResponse(
         commentEndDate:
           a.commentEndDate?.slice(0, 10) ??
           new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
-        topics: inferredTopics.length > 0 ? inferredTopics : topics.slice(0, 1),
+        topics: Array.from(inferredTopics),
         regulationsGovUrl: `https://www.regulations.gov/document/${it.id}`,
         source: "api" as const,
       };

@@ -95,10 +95,10 @@ export function TrendingRail({
           Source: regulations.gov v4 ·{" "}
           <span className="text-ink-600">
             {source === "api"
-              ? "live"
-              : source === "mixed"
-              ? "live + curated"
-              : "curated demo set"}
+              ? "live · URL-validated"
+              : source === "error"
+              ? "unavailable"
+              : "—"}
           </span>{" "}
           · cached 5 min
         </p>

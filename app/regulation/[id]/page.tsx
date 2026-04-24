@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import type { Regulation } from "@/lib/types";
-import { MOCK_REGULATIONS } from "@/lib/mock/regulations";
 import { formatDeadline, daysUntil } from "@/lib/ranking";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
@@ -43,15 +42,12 @@ export default function RegulationDetailPage() {
       .then(async (r) => {
         const json = (await r.json()) as { regulations: Regulation[] };
         if (cancelled) return;
-        const found =
-          json.regulations.find((r) => r.id === decodedId) ??
-          MOCK_REGULATIONS.find((r) => r.id === decodedId);
-        setReg(found ?? null);
+        setReg(json.regulations.find((r) => r.id === decodedId) ?? null);
         setLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
-        setReg(MOCK_REGULATIONS.find((r) => r.id === decodedId) ?? null);
+        setReg(null);
         setLoading(false);
       });
 

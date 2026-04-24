@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { rankRegulations } from "@/lib/ranking";
-import { MOCK_REGULATIONS } from "@/lib/mock/regulations";
 import type { Regulation, ScoredRegulation } from "@/lib/types";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import {
@@ -36,6 +35,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [regulations, setRegulations] = useState<ScoredRegulation[]>([]);
   const [source, setSource] = useState<string>("");
+  const [errored, setErrored] = useState(false);
 
   // Redirect to onboarding if no profile
   useEffect(() => {
@@ -57,16 +57,19 @@ export default function FeedPage() {
           source: string;
         };
         if (cancelled) return;
-        const ranked = rankRegulations(json.regulations, profile);
+        const ranked = rankRegulations(json.regulations, profile).filter(
+          (r) => r.score > 0,
+        );
         setRegulations(ranked);
         setSource(json.source);
+        setErrored(json.source === "error");
         setLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
-        const ranked = rankRegulations(MOCK_REGULATIONS, profile);
-        setRegulations(ranked);
-        setSource("mock");
+        setRegulations([]);
+        setSource("error");
+        setErrored(true);
         setLoading(false);
       });
 
@@ -124,9 +127,15 @@ export default function FeedPage() {
               </>
             ) : regulations.length === 0 ? (
               <div className="rounded-2xl border border-rule bg-paper p-10 text-center">
-                <p className="font-display text-2xl">Nothing open right now.</p>
+                <p className="font-display text-2xl">
+                  {errored
+                    ? "We couldn't reach regulations.gov."
+                    : "Nothing open right now."}
+                </p>
                 <p className="mt-2 text-ink-600">
-                  Try widening your topics in your profile.
+                  {errored
+                    ? "The federal docket API is rate-limiting or down. Try again in a minute."
+                    : "Try widening your topics in your profile, or check back tomorrow."}
                 </p>
               </div>
             ) : (

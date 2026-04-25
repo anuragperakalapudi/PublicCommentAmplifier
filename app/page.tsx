@@ -66,7 +66,7 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="mt-6 max-w-xl text-lg leading-relaxed text-ink-600"
             >
-              You should too. Public Comment Amplifier surfaces the proposed
+              You should too. OpenComment surfaces the proposed
               rules that affect your life, and helps you put a substantive
               comment into the official record — in your own voice, in under a
               minute.

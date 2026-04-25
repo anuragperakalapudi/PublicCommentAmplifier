@@ -19,9 +19,9 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: "Public Comment Amplifier — Be heard on the rules that affect you",
+  title: "OpenComment — Be heard on the rules that affect you",
   description:
-    "Federal agencies write thousands of rules a year. Public Comment Amplifier helps ordinary Americans find the ones that affect them and speak into the record.",
+    "Federal agencies write thousands of rules a year. OpenComment helps ordinary Americans find the ones that affect them and speak into the record.",
 };
 
 export default function RootLayout({

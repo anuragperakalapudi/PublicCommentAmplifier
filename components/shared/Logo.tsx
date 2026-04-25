@@ -13,12 +13,11 @@ export function Logo({ small = false }: { small?: boolean }) {
         <span className="absolute left-1.5 top-[18px] h-1 w-3 rounded-full bg-accent" />
       </span>
       <span
-        className={`font-display font-semibold tracking-tightish ${
+        className={`font-display font-semibold tracking-tighter ${
           small ? "text-base" : "text-lg"
         } text-ink`}
       >
-        Public Comment{" "}
-        <span className="italic text-accent">Amplifier</span>
+        Open<span className="italic text-accent">Comment</span>
       </span>
     </Link>
   );

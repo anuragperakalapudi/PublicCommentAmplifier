@@ -1,4 +1,4 @@
-# Public Comment Amplifier
+# OpenComment
 
 Hackathon demo. Helps ordinary Americans find federal rules that affect them and draft substantive public comments.
 

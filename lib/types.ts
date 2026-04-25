@@ -7,7 +7,11 @@ export type Topic =
   | "Environment"
   | "Education"
   | "Veterans"
-  | "Small Business";
+  | "Small Business"
+  | "Civil Rights"
+  | "Tax & Finance"
+  | "Public Safety"
+  | "Consumer Protection";
 
 export const ALL_TOPICS: Topic[] = [
   "Healthcare",
@@ -19,6 +23,10 @@ export const ALL_TOPICS: Topic[] = [
   "Education",
   "Veterans",
   "Small Business",
+  "Civil Rights",
+  "Tax & Finance",
+  "Public Safety",
+  "Consumer Protection",
 ];
 
 export type AgeRange = "18–24" | "25–34" | "35–44" | "45–54" | "55–64" | "65+";

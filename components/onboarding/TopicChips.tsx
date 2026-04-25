@@ -2,6 +2,7 @@ import { ALL_TOPICS, type Topic } from "@/lib/types";
 import {
   Heart, Home, Briefcase, Accessibility, Globe, Leaf,
   GraduationCap, Award, Building2,
+  Scale, DollarSign, Shield, ShoppingBag,
 } from "lucide-react";
 
 const TOPIC_ICONS: Record<Topic, React.ComponentType<{ className?: string }>> = {
@@ -14,6 +15,10 @@ const TOPIC_ICONS: Record<Topic, React.ComponentType<{ className?: string }>> = 
   Education: GraduationCap,
   Veterans: Award,
   "Small Business": Building2,
+  "Civil Rights": Scale,
+  "Tax & Finance": DollarSign,
+  "Public Safety": Shield,
+  "Consumer Protection": ShoppingBag,
 };
 
 export function TopicChips({

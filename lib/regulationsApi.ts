@@ -50,22 +50,39 @@ const AGENCY_TO_TOPICS: Record<string, Topic[]> = {
   DOL: ["Labor"],
   OSHA: ["Labor", "Healthcare"],
   NLRB: ["Labor"],
-  EEOC: ["Labor"],
-  HUD: ["Housing"],
+  EEOC: ["Labor", "Civil Rights"],
+  HUD: ["Housing", "Civil Rights"],
   EPA: ["Environment"],
-  PHMSA: ["Environment"],
+  PHMSA: ["Environment", "Public Safety"],
   DOE: ["Environment"],
   NRC: ["Environment"],
   USDA: ["Environment", "Small Business"],
-  ED: ["Education"],
+  ED: ["Education", "Civil Rights"],
   VA: ["Veterans", "Healthcare"],
   SBA: ["Small Business"],
   USCIS: ["Immigration"],
   ICE: ["Immigration"],
-  DHS: ["Immigration"],
+  DHS: ["Immigration", "Public Safety"],
   EOIR: ["Immigration"],
   ACL: ["Disability"],
   SSA: ["Disability"],
+  DOJ: ["Civil Rights", "Public Safety"],
+  ATF: ["Public Safety"],
+  DEA: ["Public Safety"],
+  FBI: ["Public Safety"],
+  TREAS: ["Tax & Finance"],
+  IRS: ["Tax & Finance"],
+  CFPB: ["Tax & Finance", "Consumer Protection"],
+  OCC: ["Tax & Finance"],
+  FDIC: ["Tax & Finance"],
+  FTC: ["Consumer Protection"],
+  CPSC: ["Consumer Protection", "Public Safety"],
+  FCC: ["Consumer Protection"],
+  NHTSA: ["Public Safety", "Consumer Protection"],
+  FAA: ["Public Safety"],
+  FRA: ["Public Safety"],
+  FMCSA: ["Public Safety"],
+  USCG: ["Public Safety"],
 };
 
 interface RegulationsApiAttributes {
@@ -87,6 +104,7 @@ interface RegulationsApiItem {
 const ALL_TOPICS_LIST: Topic[] = [
   "Healthcare", "Housing", "Labor", "Disability", "Immigration",
   "Environment", "Education", "Veterans", "Small Business",
+  "Civil Rights", "Tax & Finance", "Public Safety", "Consumer Protection",
 ];
 
 const TOPIC_KEYWORDS: Record<Topic, string[]> = {
@@ -99,6 +117,10 @@ const TOPIC_KEYWORDS: Record<Topic, string[]> = {
   Education: ["education", "student", "school", "college", "university", "borrower", "tuition"],
   Veterans: ["veteran", "service member", "gi bill", "military"],
   "Small Business": ["small business", "microloan", "entrepreneur", "self-employed", "minority business"],
+  "Civil Rights": ["civil rights", "discrimination", "voting", "fair housing", "harassment", "equal protection"],
+  "Tax & Finance": ["tax", "irs", "treasury", "banking", "credit union", "tax credit", "withholding"],
+  "Public Safety": ["police", "firearm", "transportation safety", "emergency", "first responder", "criminal justice"],
+  "Consumer Protection": ["consumer", "fraud", "deceptive", "unfair practice", "warranty", "recall", "robocall", "product safety"],
 };
 
 export function mapApiResponse(

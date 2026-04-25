@@ -37,6 +37,22 @@ const TOPIC_KEYWORDS: Record<Topic, string[]> = {
     "small business", "sba", "microloan", "entrepreneur", "self-employed",
     "lender", "minority business", "8(a)",
   ],
+  "Civil Rights": [
+    "civil rights", "discrimination", "voting", "fair housing", "title vi",
+    "title vii", "ada", "equal protection", "harassment", "hate crime",
+  ],
+  "Tax & Finance": [
+    "tax", "irs", "treasury", "banking", "credit union", "consumer credit",
+    "interest rate", "tax credit", "deduction", "withholding", "1099",
+  ],
+  "Public Safety": [
+    "police", "firearm", "atf", "transportation safety", "emergency",
+    "fire safety", "first responder", "9-1-1", "criminal justice", "prison",
+  ],
+  "Consumer Protection": [
+    "consumer", "ftc", "fraud", "deceptive", "unfair practice", "warranty",
+    "recall", "data privacy", "robocall", "scam", "product safety",
+  ],
 };
 
 export function scoreRegulation(

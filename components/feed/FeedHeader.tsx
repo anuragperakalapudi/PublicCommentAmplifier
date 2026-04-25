@@ -5,7 +5,12 @@ import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 import { useProfile } from "@/context/ProfileContext";
 
-export function FeedHeader() {
+interface FeedHeaderProps {
+  query?: string;
+  onQueryChange?: (q: string) => void;
+}
+
+export function FeedHeader({ query = "", onQueryChange }: FeedHeaderProps) {
   const { profile } = useProfile();
   const initials = profile?.occupation
     ? profile.occupation
@@ -15,6 +20,8 @@ export function FeedHeader() {
         .join("")
     : "PC";
 
+  const interactive = typeof onQueryChange === "function";
+
   return (
     <header className="sticky top-0 z-40 border-b border-rule bg-cream-100/85 backdrop-blur supports-[backdrop-filter]:bg-cream-100/70">
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
@@ -23,12 +30,21 @@ export function FeedHeader() {
           <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted" />
           <input
             type="text"
-            placeholder="Search 1,200+ open rules…"
+            value={query}
+            onChange={(e) => onQueryChange?.(e.target.value)}
+            placeholder="Search open federal rules…"
+            readOnly={!interactive}
             className="w-full rounded-full border border-rule bg-paper px-10 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
           />
-          <span className="absolute right-3 hidden text-[10px] uppercase tracking-widest text-muted md:inline">
-            
-          </span>
+          {query && interactive && (
+            <button
+              type="button"
+              onClick={() => onQueryChange?.("")}
+              className="absolute right-3 text-[11px] uppercase tracking-widest text-muted hover:text-ink"
+            >
+              Clear
+            </button>
+          )}
         </div>
         <Link
           href="/onboarding"

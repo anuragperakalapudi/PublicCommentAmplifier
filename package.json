@@ -9,12 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.15",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "@clerk/nextjs": "^6.39.3",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.104.1",
+    "clsx": "^2.1.1",
     "framer-motion": "^11.11.0",
     "lucide-react": "^0.453.0",
-    "clsx": "^2.1.1",
+    "next": "^14.2.33",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {

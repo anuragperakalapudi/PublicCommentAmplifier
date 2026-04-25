@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Clock, ArrowUpRight } from "lucide-react";
+import { Clock, ArrowUpRight, Bookmark, BookmarkCheck, CheckCircle2 } from "lucide-react";
 import type { ScoredRegulation } from "@/lib/types";
 import { formatDeadline, matchPercent } from "@/lib/ranking";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
+import { useSavedRegulations } from "@/hooks/useSavedRegulations";
+import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 
 export function RegulationCard({
   reg,
@@ -16,6 +18,10 @@ export function RegulationCard({
   topicCount: number;
   index: number;
 }) {
+  const { isSaved, toggle } = useSavedRegulations();
+  const { isCommented } = useCommentedRegulations();
+  const saved = isSaved(reg.id);
+  const commented = isCommented(reg.id);
   const pct = matchPercent(reg.score, topicCount);
   const deadline = formatDeadline(reg.commentEndDate);
   const closingSoon =
@@ -23,6 +29,12 @@ export function RegulationCard({
     deadline.includes("tomorrow") ||
     /Closes in (\d+) days/.test(deadline) &&
       Number(deadline.match(/(\d+)/)?.[1] ?? 99) <= 7;
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle(reg.id);
+  };
 
   return (
     <motion.article
@@ -52,12 +64,37 @@ export function RegulationCard({
             <Clock className="h-3 w-3" />
             {deadline}
           </span>
-          {reg.matchedTopics.length > 0 && (
-            <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-forest-50 px-2.5 py-1 text-xs font-medium text-forest">
-              <span className="h-1.5 w-1.5 rounded-full bg-forest" />
-              {pct}% match
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {commented && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-forest-50 px-2 py-1 text-xs font-medium text-forest">
+                <CheckCircle2 className="h-3 w-3" />
+                Commented
+              </span>
+            )}
+            {reg.matchedTopics.length > 0 && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-forest-50 px-2.5 py-1 text-xs font-medium text-forest">
+                <span className="h-1.5 w-1.5 rounded-full bg-forest" />
+                {pct}% match
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleSaveClick}
+              aria-pressed={saved}
+              aria-label={saved ? "Unsave rule" : "Save rule"}
+              className={`flex h-7 w-7 items-center justify-center rounded-full border transition ${
+                saved
+                  ? "border-accent bg-accent text-cream-50"
+                  : "border-rule bg-paper text-muted hover:border-ink/40 hover:text-ink"
+              }`}
+            >
+              {saved ? (
+                <BookmarkCheck className="h-3.5 w-3.5" />
+              ) : (
+                <Bookmark className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
         </div>
 
         <h2 className="font-display mt-4 text-2xl leading-snug text-ink transition group-hover:text-ink-900 md:text-[1.6rem]">

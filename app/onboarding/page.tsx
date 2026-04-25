@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { ProgressBar } from "@/components/onboarding/ProgressBar";
 import { Field, TextInput, ChoiceGrid } from "@/components/onboarding/Field";
@@ -77,6 +78,18 @@ export default function OnboardingPage() {
         <div className="mt-6">
           <ProgressBar step={step} total={3} labels={STEPS} />
         </div>
+
+        <aside className="mt-6 flex items-start gap-3 rounded-xl border border-rule bg-cream-50 p-4 text-sm text-ink-600">
+          <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" />
+          <p>
+            <strong className="text-ink">Used only to rank your feed and draft your comments.</strong>{" "}
+            We don&rsquo;t sell your data, share it, or train models on it. We
+            never auto-submit. You can delete everything with one click.{" "}
+            <Link href="/privacy" className="text-accent hover:underline">
+              Read our privacy policy.
+            </Link>
+          </p>
+        </aside>
 
         <div className="mt-12 min-h-[440px]">
           <AnimatePresence mode="wait" initial={false}>

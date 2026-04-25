@@ -14,29 +14,81 @@ import { loadProfile, saveProfile, clearProfile } from "@/lib/profile";
 interface ProfileContextValue {
   profile: UserProfile | null;
   hydrated: boolean;
-  setProfile: (p: UserProfile) => void;
-  reset: () => void;
+  setProfile: (p: UserProfile) => Promise<void> | void;
+  reset: () => Promise<void> | void;
 }
 
 const ProfileContext = createContext<ProfileContextValue | undefined>(undefined);
+
+const isClerkConfigured =
+  !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setProfileState(loadProfile());
-    setHydrated(true);
+    let cancelled = false;
+    const hydrate = async () => {
+      // When configured, prefer the server profile (Supabase via /api/profile).
+      // Fall back to localStorage on any non-2xx (501 not configured, 401
+      // unauthenticated, network error) so the app still works locally.
+      if (isClerkConfigured) {
+        try {
+          const r = await fetch("/api/profile");
+          if (r.ok) {
+            const json = (await r.json()) as { profile: UserProfile | null };
+            if (!cancelled) {
+              if (json.profile) {
+                setProfileState(json.profile);
+                // Mirror to localStorage so the rest of the app can read
+                // synchronously without flicker.
+                saveProfile(json.profile);
+              } else {
+                setProfileState(loadProfile());
+              }
+              setHydrated(true);
+              return;
+            }
+          }
+        } catch {
+          // fall through to localStorage
+        }
+      }
+      if (cancelled) return;
+      setProfileState(loadProfile());
+      setHydrated(true);
+    };
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const setProfile = useCallback((p: UserProfile) => {
+  const setProfile = useCallback(async (p: UserProfile) => {
     saveProfile(p);
     setProfileState(p);
+    if (!isClerkConfigured) return;
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: p }),
+      });
+    } catch {
+      // localStorage already updated; the next load will retry.
+    }
   }, []);
 
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
     clearProfile();
     setProfileState(null);
+    if (!isClerkConfigured) return;
+    try {
+      await fetch("/api/profile", { method: "DELETE" });
+    } catch {
+      // ignore
+    }
   }, []);
 
   return (

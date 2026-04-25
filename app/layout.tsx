@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter_Tight } from "next/font/google";
 import "./globals.css";
 import { ProfileProvider } from "@/context/ProfileContext";
+import { AuthShell } from "@/components/shared/AuthShell";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -32,7 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${interTight.variable}`}>
       <body>
-        <ProfileProvider>{children}</ProfileProvider>
+        <AuthShell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </AuthShell>
       </body>
     </html>
   );

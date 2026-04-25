@@ -202,9 +202,17 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-rule">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-sm text-muted">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-6 py-8 text-sm text-muted md:flex-row md:items-center">
           <Logo small />
-          <span>Built for the public, not for the docket-watchers.</span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <span>Built for the public, not for the docket-watchers.</span>
+            <Link href="/privacy" className="hover:text-ink">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-ink">
+              Terms
+            </Link>
+          </div>
         </div>
       </footer>
     </main>

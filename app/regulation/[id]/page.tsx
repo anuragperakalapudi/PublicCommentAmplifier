@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, ExternalLink, FileText, Clock, Sparkles, Bookmark, Share2,
+  ArrowLeft, ExternalLink, FileText, Clock, Sparkles,
+  Bookmark, BookmarkCheck, CheckCircle2,
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import type { Regulation } from "@/lib/types";
@@ -13,6 +14,8 @@ import { formatDeadline, daysUntil } from "@/lib/ranking";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
 import { GeneratedComment } from "@/components/regulation/GeneratedComment";
+import { useSavedRegulations } from "@/hooks/useSavedRegulations";
+import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 
 export default function RegulationDetailPage() {
   const params = useParams<{ id: string }>();
@@ -25,6 +28,9 @@ export default function RegulationDetailPage() {
 
   const [reg, setReg] = useState<Regulation | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isSaved, toggle: toggleSaved } = useSavedRegulations();
+  const { isCommented, mark: markCommented, unmark: unmarkCommented } =
+    useCommentedRegulations();
 
   useEffect(() => {
     if (hydrated && !profile) {
@@ -173,16 +179,45 @@ export default function RegulationDetailPage() {
             <span className="text-ink-600">{reg.agencyName}</span>
 
             <div className="ml-auto flex items-center gap-2">
-              <button className="inline-flex items-center gap-1.5 rounded-full border border-rule px-3 py-1.5 text-xs text-ink-600 hover:border-ink/30">
-                <Bookmark className="h-3.5 w-3.5" /> Save
-              </button>
-              <button className="inline-flex items-center gap-1.5 rounded-full border border-rule px-3 py-1.5 text-xs text-ink-600 hover:border-ink/30">
-                <Share2 className="h-3.5 w-3.5" /> Share
+              {isCommented(reg.id) && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-50 px-3 py-1.5 text-xs font-medium text-forest">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Commented
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => toggleSaved(reg.id)}
+                aria-pressed={isSaved(reg.id)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
+                  isSaved(reg.id)
+                    ? "border-accent bg-accent text-cream-50"
+                    : "border-rule text-ink-600 hover:border-ink/30"
+                }`}
+              >
+                {isSaved(reg.id) ? (
+                  <>
+                    <BookmarkCheck className="h-3.5 w-3.5" /> Saved
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="h-3.5 w-3.5" /> Save
+                  </>
+                )}
               </button>
               <a
                 href={reg.regulationsGovUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => {
+                  // Mark in sessionStorage so we can prompt on return.
+                  if (typeof window !== "undefined") {
+                    window.sessionStorage.setItem(
+                      `pca:visited:${reg.id}`,
+                      String(Date.now()),
+                    );
+                  }
+                }}
                 className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-cream-50 shadow-card hover:bg-accent-700"
               >
                 Open on regulations.gov

@@ -11,8 +11,14 @@ interface CacheEntry<T = unknown> {
 
 const memCache = new Map<string, CacheEntry>();
 
-export async function GET() {
-  const cacheKey = "all-open-proposed-rules";
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const searchTerm = url.searchParams.get("searchTerm")?.trim() ?? "";
+
+  const cacheKey = searchTerm
+    ? `search:${searchTerm.toLowerCase()}`
+    : "all-open-proposed-rules";
+
   const cached = memCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     return NextResponse.json(cached.data, {
@@ -21,10 +27,10 @@ export async function GET() {
   }
 
   const apiKey = process.env.REGULATIONS_GOV_API_KEY ?? "DEMO_KEY";
-  const url = buildRegulationsUrl();
+  const apiUrl = buildRegulationsUrl(searchTerm || undefined);
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(apiUrl, {
       headers: { "X-Api-Key": apiKey, Accept: "application/json" },
       next: { revalidate: 300 },
     });

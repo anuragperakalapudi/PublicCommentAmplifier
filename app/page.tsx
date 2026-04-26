@@ -21,10 +21,10 @@ export default function LandingPage() {
           <a className="hover:text-ink" href="#how">How it works</a>
           <a className="hover:text-ink" href="#why">Why it matters</a>
           <Link
-            href="/onboarding"
+            href={ctaHref}
             className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-cream-50 hover:bg-ink-600"
           >
-            Get started
+            {navCtaLabel}
           </Link>
         </nav>
       </header>
@@ -73,15 +73,17 @@ export default function LandingPage() {
               className="mt-10 flex flex-wrap items-center gap-4"
             >
               <Link
-                href="/onboarding"
+                href={ctaHref}
                 className="group inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-base font-medium text-cream-50 shadow-card transition hover:bg-ink-600"
               >
-                Build your civic profile
+                {ctaLabel}
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </Link>
-              <span className="text-sm text-muted">
-                No account. No email. Stored on your device.
-              </span>
+              {!signedIn && (
+                <span className="text-sm text-muted">
+                  No account. No email. Stored on your device.
+                </span>
+              )}
             </motion.div>
           </div>
 

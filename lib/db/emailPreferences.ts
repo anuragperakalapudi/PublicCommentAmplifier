@@ -7,6 +7,9 @@ export interface EmailPreferences {
   closingSoonAlerts: boolean;
   finalRuleAlerts: boolean;
   mutedTopics: string[];
+  quietHoursStart?: string | null; // "HH:MM" or null
+  quietHoursEnd?: string | null;
+  emailAddress?: string | null; // override; falls back to Clerk primary
 }
 
 export const DEFAULT_PREFS: EmailPreferences = {
@@ -16,6 +19,9 @@ export const DEFAULT_PREFS: EmailPreferences = {
   closingSoonAlerts: true,
   finalRuleAlerts: true,
   mutedTopics: [],
+  quietHoursStart: null,
+  quietHoursEnd: null,
+  emailAddress: null,
 };
 
 interface DbPrefsRow {
@@ -26,6 +32,9 @@ interface DbPrefsRow {
   closing_soon_alerts: boolean;
   final_rule_alerts: boolean;
   muted_topics: string[];
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  email_address: string | null;
 }
 
 function rowToPrefs(row: DbPrefsRow): EmailPreferences {
@@ -37,6 +46,11 @@ function rowToPrefs(row: DbPrefsRow): EmailPreferences {
     closingSoonAlerts: row.closing_soon_alerts ?? true,
     finalRuleAlerts: row.final_rule_alerts ?? true,
     mutedTopics: row.muted_topics ?? [],
+    quietHoursStart: row.quiet_hours_start
+      ? row.quiet_hours_start.slice(0, 5)
+      : null,
+    quietHoursEnd: row.quiet_hours_end ? row.quiet_hours_end.slice(0, 5) : null,
+    emailAddress: row.email_address,
   };
 }
 
@@ -71,6 +85,9 @@ export async function upsertEmailPreferences(
         closing_soon_alerts: prefs.closingSoonAlerts,
         final_rule_alerts: prefs.finalRuleAlerts,
         muted_topics: prefs.mutedTopics,
+        quiet_hours_start: prefs.quietHoursStart || null,
+        quiet_hours_end: prefs.quietHoursEnd || null,
+        email_address: prefs.emailAddress || null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -79,4 +96,19 @@ export async function upsertEmailPreferences(
     .single();
   if (error) throw new Error(error.message);
   return rowToPrefs(data as DbPrefsRow);
+}
+
+// Used by cron jobs to fan out per-user. Returns the row when present so the
+// cron can short-circuit on `digest_frequency = 'off'` etc.
+export async function listAllEmailPreferences(): Promise<
+  Array<EmailPreferences & { userId: string }>
+> {
+  const sb = supabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb.from("email_preferences").select("*");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    ...rowToPrefs(row as DbPrefsRow),
+    userId: row.user_id as string,
+  }));
 }

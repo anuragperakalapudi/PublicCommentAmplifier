@@ -12,13 +12,13 @@ interface FeedHeaderProps {
 
 export function FeedHeader({ query = "", onQueryChange }: FeedHeaderProps) {
   const { profile } = useProfile();
-  const initials = profile?.occupation
-    ? profile.occupation
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((w) => w[0]?.toUpperCase())
-        .join("")
-    : "PC";
+  const initialsSource =
+    profile?.displayName?.trim() || profile?.occupation || "OC";
+  const initials = initialsSource
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 
   const interactive = typeof onQueryChange === "function";
 
@@ -53,11 +53,13 @@ export function FeedHeader({ query = "", onQueryChange }: FeedHeaderProps) {
           <Settings2 className="h-4 w-4" />
           <span className="hidden md:inline">Settings</span>
         </Link>
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-mono text-xs font-medium text-cream-50">
-            {initials}
-          </div>
-        </div>
+        <Link
+          href="/settings/profile"
+          aria-label="Open profile settings"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-mono text-xs font-medium text-cream-50 ring-offset-2 ring-offset-cream-100 transition hover:ring-2 hover:ring-accent"
+        >
+          {initials}
+        </Link>
       </div>
     </header>
   );

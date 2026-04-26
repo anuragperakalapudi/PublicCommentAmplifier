@@ -3,21 +3,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Activity, CheckCircle2, Bookmark, Clock, ExternalLink } from "lucide-react";
+import {
+  Activity, CheckCircle2, Bookmark, Clock, ExternalLink, Megaphone,
+} from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 import { useSavedRegulations } from "@/hooks/useSavedRegulations";
 import type { Regulation } from "@/lib/types";
-import { formatDeadline, daysUntil } from "@/lib/ranking";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
 
+interface FinalRuleEvent {
+  documentId: string;
+  docketId: string;
+  sentAt: string;
+}
+
 interface TimelineItem {
-  kind: "commented" | "saved-closed";
+  kind: "commented" | "saved-closed" | "final-rule";
   documentId: string;
   date: string;
   reg?: Regulation;
   commentText?: string | null;
+  docketId?: string;
 }
 
 export default function ActivityPage() {
@@ -28,10 +36,29 @@ export default function ActivityPage() {
   const { saved, hydrated: sHydrated } = useSavedRegulations();
   const [pool, setPool] = useState<Map<string, Regulation>>(new Map());
   const [loadingPool, setLoadingPool] = useState(true);
+  const [finalRuleEvents, setFinalRuleEvents] = useState<FinalRuleEvent[]>([]);
 
   useEffect(() => {
     if (hydrated && !profile) router.replace("/onboarding");
   }, [hydrated, profile, router]);
+
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    fetch("/api/final-rule-events")
+      .then(async (r) => {
+        if (!r.ok) return;
+        const json = (await r.json()) as { events: FinalRuleEvent[] };
+        if (cancelled) return;
+        setFinalRuleEvents(json.events);
+      })
+      .catch(() => {
+        // silent — section just stays empty
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
@@ -83,8 +110,19 @@ export default function ActivityPage() {
       }
     }
 
+    // Final-rule events from email_log (Phase 2 cron output).
+    for (const ev of finalRuleEvents) {
+      out.push({
+        kind: "final-rule",
+        documentId: ev.documentId,
+        docketId: ev.docketId,
+        date: ev.sentAt,
+        reg: pool.get(ev.documentId),
+      });
+    }
+
     return out.sort((a, b) => b.date.localeCompare(a.date));
-  }, [listCommented, saved, pool]);
+  }, [listCommented, saved, pool, finalRuleEvents]);
 
   if (!hydrated || !profile) {
     return (
@@ -141,11 +179,15 @@ export default function ActivityPage() {
                   className={`absolute -left-[27px] top-2 flex h-4 w-4 items-center justify-center rounded-full ${
                     item.kind === "commented"
                       ? "bg-forest text-cream-50"
-                      : "bg-cream-50 text-muted ring-2 ring-rule"
+                      : item.kind === "final-rule"
+                        ? "bg-accent text-cream-50"
+                        : "bg-cream-50 text-muted ring-2 ring-rule"
                   }`}
                 >
                   {item.kind === "commented" ? (
                     <CheckCircle2 className="h-2.5 w-2.5" />
+                  ) : item.kind === "final-rule" ? (
+                    <Megaphone className="h-2.5 w-2.5" />
                   ) : (
                     <Bookmark className="h-2.5 w-2.5" />
                   )}
@@ -219,6 +261,45 @@ function ActivityCard({ item }: { item: TimelineItem }) {
             View on regulations.gov <ExternalLink className="h-3 w-3" />
           </a>
         )}
+      </div>
+    );
+  }
+
+  if (item.kind === "final-rule") {
+    return (
+      <div className="rounded-xl border border-accent/30 bg-accent-50 p-5">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+          <span className="font-medium text-accent">
+            <Megaphone className="mr-1 inline h-3 w-3" />
+            Final rule posted
+          </span>
+          <span>·</span>
+          <span>{dateLabel}</span>
+          {item.reg && (
+            <>
+              <span>·</span>
+              <AgencyBadge
+                agencyId={item.reg.agencyId}
+                agencyName={item.reg.agencyName}
+                size="sm"
+              />
+            </>
+          )}
+        </div>
+        <h3 className="font-display mt-2 text-lg leading-snug text-ink">
+          {item.reg?.title ?? item.documentId}
+        </h3>
+        <p className="mt-2 text-xs text-muted">
+          The agency posted the final version of a docket you engaged with.
+        </p>
+        <a
+          href={`https://www.regulations.gov/document/${encodeURIComponent(item.documentId)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+        >
+          Read the final rule <ExternalLink className="h-3 w-3" />
+        </a>
       </div>
     );
   }

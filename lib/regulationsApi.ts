@@ -314,6 +314,7 @@ const AGENCY_TO_TOPICS: Record<string, Topic[]> = {
 
 interface RegulationsApiAttributes {
   agencyId?: string;
+  docketId?: string;
   title?: string;
   docAbstract?: string | null;
   documentType?: string;
@@ -323,9 +324,14 @@ interface RegulationsApiAttributes {
   openForComment?: boolean;
 }
 
+interface RegulationsApiRelationships {
+  docket?: { data?: { id?: string } | null };
+}
+
 interface RegulationsApiItem {
   id: string;
   attributes?: RegulationsApiAttributes;
+  relationships?: RegulationsApiRelationships;
 }
 
 const ALL_TOPICS_LIST: Topic[] = [
@@ -375,8 +381,12 @@ export function mapApiResponse(
         if (keywords.some((k) => text.includes(k))) inferredTopics.add(topic);
       }
 
+      const docketId =
+        a.docketId ?? it.relationships?.docket?.data?.id ?? undefined;
+
       return {
         id: it.id,
+        docketId,
         agencyId,
         agencyName: agencyDisplayName(agencyId),
         title,

@@ -6,22 +6,22 @@ import { Clock, ArrowUpRight, Bookmark, BookmarkCheck, CheckCircle2 } from "luci
 import type { ScoredRegulation } from "@/lib/types";
 import { formatDeadline, matchPercent } from "@/lib/ranking";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
-import { useSavedRegulations } from "@/hooks/useSavedRegulations";
-import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 
 export function RegulationCard({
   reg,
   topicCount,
   index,
+  saved,
+  commented,
+  onToggleSaved,
 }: {
   reg: ScoredRegulation;
   topicCount: number;
   index: number;
+  saved: boolean;
+  commented: boolean;
+  onToggleSaved: (documentId: string) => void;
 }) {
-  const { isSaved, toggle } = useSavedRegulations();
-  const { isCommented } = useCommentedRegulations();
-  const saved = isSaved(reg.id);
-  const commented = isCommented(reg.id);
   const pct = matchPercent(reg.score, topicCount);
   const deadline = formatDeadline(reg.commentEndDate);
   const closingSoon =
@@ -33,7 +33,7 @@ export function RegulationCard({
   const handleSaveClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggle(reg.id);
+    onToggleSaved(reg.id);
   };
 
   return (

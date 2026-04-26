@@ -78,6 +78,7 @@ export async function POST(req: Request) {
       try {
         await upsertRegulationCache({
           documentId: reg.id,
+          docketId: reg.docketId,
           longSummary: longResult.text,
           keyProvisions: provisions,
           modelVersion: MODEL,

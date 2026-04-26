@@ -49,3 +49,22 @@ export async function deleteAllSaved(userId: string): Promise<void> {
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
+
+export interface SavedRow {
+  userId: string;
+  documentId: string;
+}
+
+// Used by closing-soon cron to fan out across every saved rule.
+export async function listAllSaved(): Promise<SavedRow[]> {
+  const sb = supabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("saved_regulations")
+    .select("user_id, document_id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    userId: r.user_id as string,
+    documentId: r.document_id as string,
+  }));
+}

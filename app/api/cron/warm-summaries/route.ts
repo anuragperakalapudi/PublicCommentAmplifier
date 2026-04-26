@@ -76,6 +76,7 @@ export async function GET(req: Request) {
       );
       await upsertRegulationCache({
         documentId: reg.id,
+        docketId: reg.docketId,
         shortSummary: result.text,
         modelVersion: MODEL,
       });

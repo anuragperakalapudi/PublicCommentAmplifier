@@ -12,4 +12,12 @@ export const isSupabaseConfigured =
 
 export const isGeminiConfigured = !!process.env.GEMINI_API_KEY;
 
+export const isResendConfigured = !!process.env.RESEND_API_KEY;
+
+export const RESEND_FROM_EMAIL =
+  process.env.RESEND_FROM_EMAIL ?? "OpenComment <hello@opencomment.org>";
+
+export const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const NOT_CONFIGURED = "not_configured";

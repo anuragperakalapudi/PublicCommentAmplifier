@@ -20,6 +20,10 @@ import {
   isAnyFilterActive,
   type FilterState,
 } from "@/components/feed/FilterRail";
+import { useSavedRegulations } from "@/hooks/useSavedRegulations";
+import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
+
+const PAGE_SIZE = 20;
 
 const STATE_NAMES: Record<string, string> = {
   CA: "California", NY: "New York", TX: "Texas", FL: "Florida", OH: "Ohio",
@@ -88,6 +92,12 @@ export default function FeedPage() {
   const [searching, setSearching] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Hoist save/commented hooks once at the page level so each card doesn't
+  // independently fetch + double-fire under React StrictMode.
+  const { isSaved, toggle: toggleSaved } = useSavedRegulations();
+  const { isCommented } = useCommentedRegulations();
 
   // Redirect to onboarding if no profile
   useEffect(() => {
@@ -210,6 +220,18 @@ export default function FeedPage() {
     stateName,
     profile?.state,
   ]);
+
+  // Reset pagination whenever the displayed pool's identity changes
+  // (search query, filter state, or new base load).
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [debouncedQuery, filters, baseRegulations]);
+
+  const visibleRegs = useMemo(
+    () => displayed.slice(0, visibleCount),
+    [displayed, visibleCount],
+  );
+  const remaining = displayed.length - visibleRegs.length;
 
   // Filter options derived from the current pool (pre-filter)
   const filterPool = searchResults !== null ? searchResults : baseRegulations;
@@ -335,18 +357,40 @@ export default function FeedPage() {
                 </p>
               </div>
             ) : (
-              displayed.map((reg, i) => (
-                <RegulationCard
-                  key={reg.id}
-                  reg={reg}
-                  topicCount={profile.topics.length}
-                  index={i}
-                />
-              ))
+              <>
+                {visibleRegs.map((reg, i) => (
+                  <RegulationCard
+                    key={reg.id}
+                    reg={reg}
+                    topicCount={profile.topics.length}
+                    index={i}
+                    saved={isSaved(reg.id)}
+                    commented={isCommented(reg.id)}
+                    onToggleSaved={toggleSaved}
+                  />
+                ))}
+                {remaining > 0 && (
+                  <div className="flex justify-center pt-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleCount((n) => n + PAGE_SIZE)
+                      }
+                      className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-5 py-2.5 text-sm font-medium text-ink hover:border-ink/40 hover:shadow-card"
+                    >
+                      Show more
+                      <span className="font-mono text-xs text-muted">
+                        {remaining} remaining
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
             {!loading &&
               !searching &&
               displayed.length > 0 &&
+              remaining === 0 &&
               !isSearching &&
               !filtersActive && (
                 <p className="pt-6 text-center text-xs text-muted">
@@ -357,7 +401,7 @@ export default function FeedPage() {
           </div>
 
           <aside className="hidden w-72 flex-shrink-0 space-y-6 lg:block">
-            <div className="sticky top-24 space-y-6">
+            <div className="sticky top-24 max-h-[calc(100vh-7rem)] space-y-6 overflow-y-auto pr-1">
               <FilterRail
                 filters={filters}
                 onChange={setFilters}

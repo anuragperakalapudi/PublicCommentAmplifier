@@ -23,6 +23,7 @@ export default function OnboardingPage() {
   const { setProfile, profile } = useProfile();
 
   const [step, setStep] = useState(1);
+  const [displayName, setDisplayName] = useState("");
   const [ageRange, setAgeRange] = useState<AgeRange | null>(null);
   const [occupation, setOccupation] = useState("");
   const [state, setState] = useState<string>("");
@@ -33,6 +34,7 @@ export default function OnboardingPage() {
   // pre-fill from existing profile (allows editing later)
   useEffect(() => {
     if (profile) {
+      setDisplayName(profile.displayName ?? "");
       setAgeRange(profile.ageRange);
       setOccupation(profile.occupation);
       setState(profile.state);
@@ -54,14 +56,16 @@ export default function OnboardingPage() {
 
   const finish = () => {
     if (!ageRange || !state || !income || !household) return;
+    const trimmedName = displayName.trim();
     const next: UserProfile = {
+      displayName: trimmedName || undefined,
       ageRange,
       occupation: occupation.trim(),
       state,
       income,
       household,
       topics,
-      createdAt: new Date().toISOString(),
+      createdAt: profile?.createdAt ?? new Date().toISOString(),
     };
     setProfile(next);
     router.push("/feed");
@@ -111,6 +115,17 @@ export default function OnboardingPage() {
                 </p>
 
                 <div className="mt-10 space-y-7">
+                  <Field
+                    label="What should we call you?"
+                    hint="First name only is fine. Optional — used for your avatar."
+                  >
+                    <TextInput
+                      value={displayName}
+                      onChange={setDisplayName}
+                      placeholder="Alex"
+                    />
+                  </Field>
+
                   <Field label="Age range">
                     <ChoiceGrid
                       options={AGE_RANGES}

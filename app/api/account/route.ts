@@ -4,6 +4,8 @@ import { isClerkConfigured, isSupabaseConfigured } from "@/lib/config";
 import { deleteProfile, getProfile } from "@/lib/db/profiles";
 import { deleteAllSaved, listSaved } from "@/lib/db/saved";
 import { deleteAllCommented, listCommented } from "@/lib/db/commented";
+import { deleteAllEmailLog } from "@/lib/db/emailLog";
+import { deleteAllWatched } from "@/lib/db/docketWatch";
 
 function notConfigured() {
   return NextResponse.json({ error: "not_configured" }, { status: 501 });
@@ -49,6 +51,8 @@ export async function DELETE() {
     deleteProfile(userId),
     deleteAllSaved(userId),
     deleteAllCommented(userId),
+    deleteAllEmailLog(userId),
+    deleteAllWatched(userId),
   ]);
   // Delete the Clerk user too. Dynamic import so the package isn't pulled
   // when Clerk isn't configured at module load.

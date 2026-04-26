@@ -3,6 +3,7 @@ import { supabaseAdmin } from "./client";
 
 interface DbProfileRow {
   user_id: string;
+  display_name: string | null;
   age_range: string | null;
   occupation: string | null;
   state: string | null;
@@ -15,6 +16,7 @@ interface DbProfileRow {
 
 function rowToProfile(row: DbProfileRow): UserProfile {
   return {
+    displayName: row.display_name ?? undefined,
     ageRange: (row.age_range ?? "25–34") as UserProfile["ageRange"],
     occupation: row.occupation ?? "",
     state: row.state ?? "",
@@ -48,6 +50,7 @@ export async function upsertProfile(
     .upsert(
       {
         user_id: userId,
+        display_name: profile.displayName ?? null,
         age_range: profile.ageRange,
         occupation: profile.occupation,
         state: profile.state,
@@ -69,4 +72,18 @@ export async function deleteProfile(userId: string): Promise<void> {
   if (!sb) return;
   const { error } = await sb.from("profiles").delete().eq("user_id", userId);
   if (error) throw new Error(error.message);
+}
+
+export type ProfileWithUserId = UserProfile & { userId: string };
+
+// Used by cron jobs to fan out across all users with profiles.
+export async function listAllProfiles(): Promise<ProfileWithUserId[]> {
+  const sb = supabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb.from("profiles").select("*");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    ...rowToProfile(row as DbProfileRow),
+    userId: row.user_id as string,
+  }));
 }

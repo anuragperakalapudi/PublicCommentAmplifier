@@ -20,6 +20,8 @@ interface EmailPrefs {
   closingSoonAlerts: boolean;
   finalRuleAlerts: boolean;
   mutedTopics: string[];
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
 }
 
 const DEFAULT_PREFS: EmailPrefs = {
@@ -29,6 +31,8 @@ const DEFAULT_PREFS: EmailPrefs = {
   closingSoonAlerts: true,
   finalRuleAlerts: true,
   mutedTopics: [],
+  quietHoursStart: null,
+  quietHoursEnd: null,
 };
 
 const FREQ_OPTIONS = [
@@ -214,6 +218,46 @@ export default function SettingsEmailPage() {
             checked={prefs.finalRuleAlerts}
             onChange={(v) => setPrefs((p) => ({ ...p, finalRuleAlerts: v }))}
           />
+
+          <fieldset className="rounded-xl border border-rule bg-paper p-4">
+            <legend className="px-1 text-sm font-medium text-ink">
+              Quiet hours
+            </legend>
+            <p className="mt-1 text-xs text-muted">
+              We won&rsquo;t send email between these hours in your timezone.
+              Leave blank to disable.
+            </p>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <label className="block text-sm">
+                <span className="font-medium text-ink">Start</span>
+                <input
+                  type="time"
+                  value={prefs.quietHoursStart ?? ""}
+                  onChange={(e) =>
+                    setPrefs((p) => ({
+                      ...p,
+                      quietHoursStart: e.target.value || null,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-md border border-rule bg-paper px-3 py-2 text-ink focus:border-accent focus:outline-none"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="font-medium text-ink">End</span>
+                <input
+                  type="time"
+                  value={prefs.quietHoursEnd ?? ""}
+                  onChange={(e) =>
+                    setPrefs((p) => ({
+                      ...p,
+                      quietHoursEnd: e.target.value || null,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-md border border-rule bg-paper px-3 py-2 text-ink focus:border-accent focus:outline-none"
+                />
+              </label>
+            </div>
+          </fieldset>
 
           <fieldset>
             <legend className="text-sm font-medium text-ink">

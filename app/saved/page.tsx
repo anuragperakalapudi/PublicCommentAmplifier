@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Bookmark, ExternalLink } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { useSavedRegulations } from "@/hooks/useSavedRegulations";
+import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 import { rankRegulations } from "@/lib/ranking";
 import type { Regulation, ScoredRegulation } from "@/lib/types";
 import { FeedHeader } from "@/components/feed/FeedHeader";
@@ -14,12 +15,21 @@ import {
   RegulationCardSkeleton,
 } from "@/components/feed/RegulationCard";
 
+const PAGE_SIZE = 20;
+
 export default function SavedPage() {
   const router = useRouter();
   const { profile, hydrated } = useProfile();
-  const { saved, hydrated: savedHydrated } = useSavedRegulations();
+  const {
+    saved,
+    hydrated: savedHydrated,
+    isSaved,
+    toggle: toggleSaved,
+  } = useSavedRegulations();
+  const { isCommented } = useCommentedRegulations();
   const [pool, setPool] = useState<ScoredRegulation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     if (hydrated && !profile) router.replace("/onboarding");
@@ -55,6 +65,17 @@ export default function SavedPage() {
           new Date(b.commentEndDate).getTime(),
       );
   }, [pool, saved]);
+
+  // Reset pagination when the saved set changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [saved]);
+
+  const visibleSaved = useMemo(
+    () => savedRegs.slice(0, visibleCount),
+    [savedRegs, visibleCount],
+  );
+  const remainingSaved = savedRegs.length - visibleSaved.length;
 
   // Saved IDs that aren't in the current open-rules pool (closed or otherwise
   // missing). We show them as stubs so the user can still link out.
@@ -113,14 +134,31 @@ export default function SavedPage() {
           </div>
         ) : (
           <div className="space-y-5">
-            {savedRegs.map((reg, i) => (
+            {visibleSaved.map((reg, i) => (
               <RegulationCard
                 key={reg.id}
                 reg={reg}
                 topicCount={profile.topics.length}
                 index={i}
+                saved={isSaved(reg.id)}
+                commented={isCommented(reg.id)}
+                onToggleSaved={toggleSaved}
               />
             ))}
+            {remainingSaved > 0 && (
+              <div className="flex justify-center pt-3">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-5 py-2.5 text-sm font-medium text-ink hover:border-ink/40 hover:shadow-card"
+                >
+                  Show more
+                  <span className="font-mono text-xs text-muted">
+                    {remainingSaved} remaining
+                  </span>
+                </button>
+              </div>
+            )}
             {orphanIds.length > 0 && (
               <div className="rounded-xl border border-rule bg-cream-50 p-5">
                 <p className="text-sm font-medium text-ink">

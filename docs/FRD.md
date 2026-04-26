@@ -48,6 +48,7 @@ A new user's first session is steps 1-7 minus the email; they reach the feed via
 - Data export: one-click email of full JSON dump.
 - Sessions persist across devices (logged-in state via auth provider's standard mechanism).
 - The public landing page and a sample feed are accessible without auth; personalization, save, comment-tracking, and email features require sign-in.
+- Display name: collected at sign-up via Clerk's standard fields, or via an optional "What should we call you?" input during onboarding tier 1 when Clerk is not used. Used for the header avatar initials.
 
 ### 3.2 Onboarding
 
@@ -69,6 +70,11 @@ Three required tiers, the second two optional and clearly labeled:
 - Examples shown ("My experience with surprise medical bills," "Why my small business closed during the rule change")
 - Stories are used as grounding context when drafting comments on related rules
 - Each story can be edited or deleted at any time from settings
+
+**Tier 4 — Optional profile picture (post-launch):**
+- Square crop, 200×200 max, JPEG/PNG only, 1 MB cap
+- Stored in Supabase Storage; referenced via `profile_picture_url` on the `profiles` table
+- Replaces the initials avatar in the header. Always optional. Removable from `/settings/profile` with one click.
 
 **Privacy panel:** persistent on every onboarding screen with plain-English statements about data use, no-sale commitment, no-auto-submit commitment, and a link to delete data.
 
@@ -102,6 +108,8 @@ Three required tiers, the second two optional and clearly labeled:
   - "Couldn't reach regulations.gov" (with retry)
   - "No rules currently open in your topics" (suggests broadening topics)
 - No fake fallback data ever
+- Pagination: feed shows 20 results initially with a "Show more" control to reveal the next 20. Resets when filters or search change.
+- Match score slider includes a distribution sparkline above the input showing the histogram of `matchPercent()` across the currently displayed pool, so users can see where their threshold cuts.
 
 ### 3.4 Regulation detail
 

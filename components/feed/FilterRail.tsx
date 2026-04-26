@@ -156,9 +156,24 @@ export function FilterRail({
           onChange={(e) =>
             onChange({ ...filters, minMatch: Number(e.target.value) })
           }
+          list="match-ticks"
           className="w-full accent-accent"
           aria-label="Minimum match score"
         />
+        <datalist id="match-ticks">
+          <option value="0" />
+          <option value="25" />
+          <option value="50" />
+          <option value="75" />
+          <option value="95" />
+        </datalist>
+        <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
+          <span>0%</span>
+          <span>25%</span>
+          <span>50%</span>
+          <span>75%</span>
+          <span>95%</span>
+        </div>
       </div>
 
       {/* State relevance */}

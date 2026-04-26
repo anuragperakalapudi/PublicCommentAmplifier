@@ -82,6 +82,7 @@ export const US_STATES = [
 ];
 
 export interface UserProfile {
+  displayName?: string;
   ageRange: AgeRange;
   occupation: string;
   state: string;
@@ -93,6 +94,7 @@ export interface UserProfile {
 
 export interface Regulation {
   id: string;
+  docketId?: string;
   agencyId: string;
   agencyName: string;
   title: string;

@@ -3,6 +3,18 @@
     {
       "path": "/api/cron/warm-summaries",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/digest",
+      "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/closing-soon",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/final-rule",
+      "schedule": "30 9 * * *"
     }
   ]
 }

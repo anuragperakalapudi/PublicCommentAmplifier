@@ -18,6 +18,7 @@ export default function SettingsProfilePage() {
   const router = useRouter();
   const { profile, hydrated, setProfile } = useProfile();
 
+  const [displayName, setDisplayName] = useState("");
   const [ageRange, setAgeRange] = useState<AgeRange | null>(null);
   const [occupation, setOccupation] = useState("");
   const [state, setState] = useState<string>("");
@@ -29,6 +30,7 @@ export default function SettingsProfilePage() {
   useEffect(() => {
     if (hydrated && !profile) router.replace("/onboarding");
     if (profile) {
+      setDisplayName(profile.displayName ?? "");
       setAgeRange(profile.ageRange);
       setOccupation(profile.occupation);
       setState(profile.state);
@@ -48,7 +50,9 @@ export default function SettingsProfilePage() {
 
   const handleSave = async () => {
     if (!canSave || !ageRange || !state || !income || !household) return;
+    const trimmedName = displayName.trim();
     const next: UserProfile = {
+      displayName: trimmedName || undefined,
       ageRange,
       occupation: occupation.trim(),
       state,
@@ -88,6 +92,17 @@ export default function SettingsProfilePage() {
         </p>
 
         <div className="mt-10 space-y-7">
+          <Field
+            label="What should we call you?"
+            hint="First name only is fine. Optional — used for your avatar."
+          >
+            <TextInput
+              value={displayName}
+              onChange={setDisplayName}
+              placeholder="Alex"
+            />
+          </Field>
+
           <Field label="Age range">
             <ChoiceGrid
               options={AGE_RANGES}

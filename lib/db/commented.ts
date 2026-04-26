@@ -73,3 +73,20 @@ export async function deleteAllCommented(userId: string): Promise<void> {
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
+
+// Used by final-rule cron to seed docket_watch from the existing engagement
+// set (commented and saved both count as "engaged").
+export async function listAllCommentedDocumentIds(): Promise<
+  Array<{ userId: string; documentId: string }>
+> {
+  const sb = supabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("commented_regulations")
+    .select("user_id, document_id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    userId: r.user_id as string,
+    documentId: r.document_id as string,
+  }));
+}

@@ -47,11 +47,11 @@ export function FeedHeader({ query = "", onQueryChange }: FeedHeaderProps) {
           )}
         </div>
         <Link
-          href="/onboarding"
+          href="/settings"
           className="inline-flex items-center gap-2 text-sm text-ink-600 hover:text-ink"
         >
           <Settings2 className="h-4 w-4" />
-          <span className="hidden md:inline">Edit profile</span>
+          <span className="hidden md:inline">Settings</span>
         </Link>
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-mono text-xs font-medium text-cream-50">

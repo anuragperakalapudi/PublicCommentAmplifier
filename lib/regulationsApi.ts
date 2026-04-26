@@ -353,6 +353,7 @@ const TOPIC_KEYWORDS: Record<Topic, string[]> = {
 export function mapApiResponse(
   items: RegulationsApiItem[],
   _topics: Topic[],
+  cachedShortSummaries?: Map<string, string>,
 ): Regulation[] {
   return items
     .filter((it) => it && it.id && it.attributes)
@@ -360,7 +361,9 @@ export function mapApiResponse(
     .map((it) => {
       const a = it.attributes!;
       const title = a.title ?? "Untitled regulation";
+      const cachedSummary = cachedShortSummaries?.get(it.id);
       const summary =
+        cachedSummary ||
         (a.docAbstract && a.docAbstract.trim()) ||
         truncate(title, 240);
       const text = `${title} ${a.docAbstract ?? ""}`.toLowerCase();

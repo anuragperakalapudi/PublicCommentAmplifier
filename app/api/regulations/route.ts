@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildRegulationsUrl, mapApiResponse } from "@/lib/regulationsApi";
+import { isSupabaseConfigured } from "@/lib/config";
+import { getCachedShortSummaries } from "@/lib/db/cache";
 import type { Regulation } from "@/lib/types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -39,7 +41,20 @@ export async function GET(req: Request) {
 
     const json = (await res.json()) as { data?: unknown[] };
     const items = Array.isArray(json.data) ? json.data : [];
-    const mapped = mapApiResponse(items as never[], []);
+    // Look up cached LLM short summaries for the docs in this batch (when
+    // Supabase is configured). Misses fall through to the truncated abstract.
+    let cached: Map<string, string> | undefined;
+    if (isSupabaseConfigured) {
+      try {
+        const ids = (items as Array<{ id?: string }>)
+          .map((it) => it?.id)
+          .filter((id): id is string => !!id);
+        cached = await getCachedShortSummaries(ids);
+      } catch {
+        // non-fatal — feed still renders with truncated abstracts
+      }
+    }
+    const mapped = mapApiResponse(items as never[], [], cached);
 
     const payload = {
       regulations: mapped,

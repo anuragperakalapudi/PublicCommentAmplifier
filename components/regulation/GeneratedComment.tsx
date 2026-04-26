@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Sparkles, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { Regulation, UserProfile } from "@/lib/types";
 import { buildComment, commentWordCount } from "@/lib/mock/commentTemplates";
 import { CopyButton } from "./CopyButton";
@@ -10,10 +10,17 @@ import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 
 type Variant = "balanced" | "shorter" | "personal";
 const VARIANTS: { id: Variant; label: string; hint: string }[] = [
-  { id: "balanced", label: "Balanced", hint: "Default — civic, substantive" },
-  { id: "shorter", label: "Shorter", hint: "Tighter — straight to the ask" },
-  { id: "personal", label: "More personal", hint: "Leans into your story" },
+  { id: "balanced", label: "Lead with policy", hint: "Civic, substantive, anchored in your stake" },
+  { id: "shorter", label: "Lead with a question", hint: "Tighter — the question this raises for you" },
+  { id: "personal", label: "Lead with story", hint: "Open with a vivid moment from your life" },
 ];
+
+const isGeminiConfiguredClient =
+  typeof process !== "undefined" &&
+  // We can't read GEMINI_API_KEY on the client (server-only). Assume the
+  // server is configured if the API responds 200; treat all non-2xx as
+  // "fall back to template."
+  true;
 
 export function GeneratedComment({
   reg,
@@ -23,25 +30,72 @@ export function GeneratedComment({
   profile: UserProfile;
 }) {
   const [variant, setVariant] = useState<Variant>("balanced");
-  const [generating, setGenerating] = useState(false);
+  const [generating, setGenerating] = useState(true);
+  const [llmText, setLlmText] = useState<string | null>(null);
+  const [llmFlags, setLlmFlags] = useState<string[]>([]);
+  const [llmFailed, setLlmFailed] = useState(false);
   const { isCommented, mark, unmark, commented } = useCommentedRegulations();
   const [showMarkUI, setShowMarkUI] = useState(false);
   const [pasteback, setPasteback] = useState("");
 
-  const text = useMemo(() => buildComment(reg, profile, variant), [
-    reg,
-    profile,
-    variant,
-  ]);
+  // Synchronous fallback always available so we can render something
+  // immediately while the LLM call is in flight.
+  const fallbackText = useMemo(
+    () => buildComment(reg, profile, variant),
+    [reg, profile, variant],
+  );
+
+  const text = llmText ?? fallbackText;
   const words = commentWordCount(text);
+
+  // Fetch LLM draft on mount and when variant changes.
+  useEffect(() => {
+    if (!isGeminiConfiguredClient) return;
+    let cancelled = false;
+    setGenerating(true);
+    setLlmFailed(false);
+    setLlmFlags([]);
+
+    fetch("/api/llm/comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regulation: reg, profile, variant }),
+    })
+      .then(async (r) => {
+        if (cancelled) return;
+        if (!r.ok) {
+          // 501 (not configured) or 500 (error) — fall back to template silently.
+          setLlmText(null);
+          setLlmFailed(r.status >= 500);
+          setGenerating(false);
+          return;
+        }
+        const json = (await r.json()) as {
+          text: string;
+          flags?: string[];
+          ok?: boolean;
+        };
+        if (cancelled) return;
+        setLlmText(json.text);
+        setLlmFlags(json.flags ?? []);
+        setGenerating(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLlmText(null);
+        setLlmFailed(true);
+        setGenerating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reg, profile, variant]);
 
   const switchVariant = (v: Variant) => {
     if (v === variant) return;
-    setGenerating(true);
-    setTimeout(() => {
-      setVariant(v);
-      setGenerating(false);
-    }, 380);
+    setVariant(v);
+    setLlmText(null); // clear so the fallback shows during regen
   };
 
   const submittedEntry = commented.get(reg.id);
@@ -53,12 +107,18 @@ export function GeneratedComment({
     setPasteback("");
   };
 
+  const usingTemplate = llmText === null;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-accent">
           <Sparkles className="h-3.5 w-3.5" />
-          Drafted for you
+          {usingTemplate
+            ? generating
+              ? "Drafting…"
+              : "Drafted for you (template)"
+            : "Drafted for you"}
         </div>
         <CopyButton text={text} />
       </div>
@@ -80,7 +140,7 @@ export function GeneratedComment({
                     : "border-rule bg-paper text-ink-600 hover:border-ink/40"
                 }`}
               >
-                {active && <RefreshCw className="h-3 w-3" />}
+                {active && generating && <RefreshCw className="h-3 w-3 animate-spin" />}
                 {v.label}
               </button>
             );
@@ -91,7 +151,7 @@ export function GeneratedComment({
         </div>
 
         <AnimatePresence mode="wait">
-          {generating ? (
+          {generating && !text ? (
             <motion.div
               key="gen"
               initial={{ opacity: 0 }}
@@ -106,12 +166,12 @@ export function GeneratedComment({
               <div className="skeleton h-4 w-full" />
               <div className="skeleton h-4 w-10/12" />
               <p className="pt-2 text-xs italic text-muted">
-                Re-anchoring to your profile…
+                Anchoring to your profile…
               </p>
             </motion.div>
           ) : (
             <motion.pre
-              key={variant}
+              key={`${variant}-${usingTemplate ? "tmpl" : "llm"}`}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -138,6 +198,23 @@ export function GeneratedComment({
           We don&rsquo;t submit for you. You stay in control.
         </span>
       </div>
+
+      {llmFlags.length > 0 && (
+        <div className="flex items-start gap-2 rounded-lg border border-accent/40 bg-accent-50 p-3 text-xs text-ink-600">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent" />
+          <span>
+            Heads up: this draft tripped our quality gate. Review carefully
+            before submitting. Flags:{" "}
+            <code className="font-mono text-[10px]">{llmFlags.join(", ")}</code>
+          </span>
+        </div>
+      )}
+
+      {llmFailed && (
+        <p className="text-xs italic text-muted">
+          LLM draft failed. Showing a template draft you can still edit.
+        </p>
+      )}
 
       {/* "I submitted this" UI */}
       <div className="rounded-xl border border-rule bg-paper p-5">

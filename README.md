@@ -1,140 +1,198 @@
 # OpenComment
 
-OpenComment is a hackathon demo for making federal rulemaking legible, searchable, and actionable for ordinary Americans.
+OpenComment helps ordinary Americans find federal proposed rules that affect their lives and submit substantive public comments to the official record at regulations.gov.
 
-Federal agencies propose thousands of rules every year that shape everyday life: how home health aides get paid, what counts as overtime, which medications are covered, what landlords can charge, and whether small businesses can navigate new compliance requirements. By law, agencies must read and respond to substantive public comments before finalizing those rules. Public comment is one of the rare places in American democracy where a person with lived experience can put something into the official record and legally require the government to answer it.
-
-The problem is access. Regulations.gov is built for attorneys, lobbyists, policy shops, and trade associations. OpenComment gives everyone else a doorway in. The app collects a lightweight civic profile, pulls currently open proposed rules from regulations.gov, ranks them against the user's interests and life context, and generates a personalized draft comment that can be reviewed, edited, owned, and copied into the official comment form.
+This repository is the Phase 1 production build: real LLM-drafted comments, persistent saved/commented state, magic-link auth, and Vercel deployment. See [`docs/`](docs/) for the full FRD and project plan.
 
 ## Mission
 
-Public Comment Amplifier exists to give every American the same access to federal rulemaking that lobbyists and trade associations already have.
+Trade associations and lobbyists routinely participate in federal rulemaking. Ordinary citizens almost never do, despite having the legal right and a meaningful potential impact. OpenComment closes that gap.
 
-We are not generating astroturf. We are not optimizing for volume. Every comment should be anchored to a real person and a real story, edited and approved by that person before submission. The goal is not to flood agencies with synthetic noise; it is to help people who were always supposed to be in the room finally get there.
+Three commitments shape every product decision:
 
-Democracy is not only a vote every four years. It is also the thousand small windows that open and close every week, often without most Americans knowing they were open. OpenComment is built to make those windows visible.
+- **Anti-astroturf by construction.** Every comment is anchored to a real, signed-in user's lived situation, drafted from facts they entered, and submitted by them through their own session on regulations.gov. The product never auto-submits and never generates identical text across users.
+- **Privacy as primary UX.** Layered consent, plain-English data controls, and one-click deletion are core product surfaces, not legal afterthoughts.
+- **Outputs that don't read as AI.** Every LLM surface ships with a tuned system prompt, a banned-phrase post-processor, and a quality gate.
 
-## How It Works
+## Phase 1 features
 
-OpenComment turns a hard civic workflow into a guided product flow:
+- Magic-link sign-in via Clerk (with localStorage fallback when keys aren't set)
+- Profile, saved-rules, commented-rules, regulation cache, and email preferences in Supabase Postgres
+- Gemini-powered comment drafting with three structural variants and an em-dash + banned-phrase quality gate
+- Gemini-powered plain-language summaries (3 paragraphs) and key provisions on the detail page
+- Gemini-powered one-line feed summaries warmed nightly via Vercel Cron and cached forever per document
+- Personalized "why this is in your feed" generated on demand
+- Hybrid feed search: server-side `filter[searchTerm]` first, client-side substring fallback for fuzzy matches
+- Filter rail: agency, topic, deadline urgency, match score, state relevance
+- 102 federal agencies mapped to topics for richer feed coverage
+- 13 topics (added Civil Rights, Tax & Finance, Public Safety, Consumer Protection)
+- Settings hub: profile editor, email preferences, privacy & data (export + one-click delete)
+- Privacy policy and terms of service pages
 
-1. A user describes who they are: state, occupation, household context, and issues they care about.
-2. The app fetches open proposed rules from regulations.gov.
-3. Local ranking logic scores rules against the user's selected topics and the rule text.
-4. The feed highlights rules that are most likely to affect the user.
-5. A regulation detail page explains the rule in plain language and links to the official docket.
-6. The app drafts a substantive public comment grounded in the user's profile.
-7. The user copies the draft, edits it if they want, and submits it through regulations.gov.
+## Tech stack
 
-## What It Does
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 14 App Router |
+| Language | TypeScript (strict) |
+| Auth | Clerk (magic-link) |
+| Database | Supabase Postgres |
+| LLM | Gemini 2.5 Flash via `@google/generative-ai` |
+| Federal data | regulations.gov v4 API |
+| Cron | Vercel Cron |
+| Styling | Tailwind + CSS variables |
+| Animation | Framer Motion |
+| Icons | Lucide React |
 
-- Three-step onboarding for demographics, household context, state, occupation, and issue interests
-- Personalized feed of open federal proposed rules from regulations.gov
-- Local relevance ranking based on topic and keyword overlap
-- Regulation detail pages with plain-language context, deadlines, and official regulations.gov links
-- Generated comment drafts personalized to the user's profile and selected rule
-- Copy-to-clipboard flow for moving the draft into the official comment box
-- Local profile persistence with `localStorage`; no account or backend database required
-
-## Product Principles
-
-- **Human agency first:** the app drafts; the user reviews, edits, owns, and submits.
-- **Substance over volume:** comments should be specific, relevant, and grounded in lived experience.
-- **Official channels matter:** final submission happens through regulations.gov, the real federal record.
-- **Plain language without dumbing down:** users should understand what is at stake without needing legal training.
-- **Privacy by default for the demo:** profile data stays in local browser storage.
-
-## Demo Scope
-
-This repository is a presentational MVP built for a hackathon. It is designed to show the end-to-end experience clearly:
-
-- The feed uses the real regulations.gov v4 documents API.
-- The API key stays server-side in a Next.js route handler.
-- Results are cached in memory for 5 minutes to keep the demo responsive.
-- Ranking is intentionally simple and transparent.
-- Comment generation is represented with deterministic, profile-aware draft templates rather than a live LLM call.
-- The app does not submit comments directly; it sends users to the official regulations.gov page.
-
-## Tech Stack
-
-- Next.js 14 App Router
-- TypeScript
-- Tailwind CSS
-- React Context for profile state
-- Framer Motion for transitions
-- Lucide React icons
-- regulations.gov v4 documents API
-
-## Run Locally
+## Run locally
 
 ```bash
 npm install
+cp .env.local.example .env.local
+# Fill in any keys you have — see "Optional service setup" below.
 npm run dev
 ```
 
 Open http://localhost:3000.
 
-## Optional: regulations.gov API Key
+The app degrades gracefully when service keys aren't set:
 
-The app uses `DEMO_KEY` when no API key is provided. That is fine for low-volume demo use, but a free API key is recommended for smoother testing.
+| Service | Without key | With key |
+|---|---|---|
+| Clerk | Profile in localStorage; sign-in pages show a "not configured" message | Real magic-link auth, multi-device profile sync |
+| Supabase | All persistence in localStorage; activity/saved/commented work on this device only | Full Postgres-backed persistence and account export/delete |
+| Gemini | Template-based comment drafting; truncated rule abstracts; static "why in feed" copy | Real LLM-drafted comments, plain-language summaries, key provisions, personalized "why" |
 
-1. Get a key from https://api.data.gov/signup/
-2. Create a local env file:
+You can run with any combination — e.g., Gemini on but Supabase off — and each surface degrades independently.
+
+## Optional service setup
+
+### regulations.gov API key
+
+The app uses `DEMO_KEY` if no key is set. For production traffic, get a free key:
 
 ```bash
-cp .env.local.example .env.local
+# https://api.data.gov/signup/
+REGULATIONS_GOV_API_KEY=your_key_here
 ```
 
-3. Set:
+### Clerk (auth)
+
+1. Create an application at https://dashboard.clerk.com
+2. Copy the publishable key and secret key into `.env.local`:
 
 ```bash
-REGULATIONS_GOV_API_KEY=your_api_key_here
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
 ```
 
-The server route at `app/api/regulations/route.ts` keeps the key server-side, fetches open proposed rules, and caches responses in memory for 5 minutes.
+Restart the dev server. Sign-in / sign-up routes now use Clerk's hosted UI; protected routes (`/feed`, `/saved`, `/activity`, `/settings`) require auth.
 
-## Demo Flow
+### Supabase (database)
 
-1. Start on the landing page and click **Build your civic profile**.
-2. Complete onboarding with a realistic profile, such as a home health aide in Ohio interested in Healthcare and Labor.
-3. Review the personalized feed of open proposed rules.
-4. Open a regulation card to view the rule detail page.
-5. Copy the generated comment draft.
-6. Click **Open on regulations.gov** and paste the draft into the official comment box.
+1. Create a project at https://supabase.com
+2. Copy the project URL and keys into `.env.local`:
 
-## Example Use Cases
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
 
-- A home health aide finds a Medicare rule that affects telehealth access for homebound patients.
-- A disabled veteran finds a benefits rule with a short comment window.
-- A parent using SNAP finds a nutrition or eligibility rule before the deadline closes.
-- A small farmer finds an agriculture or environmental rule that would change operating costs.
-- A teacher or student borrower finds an education rule that affects repayment, access, or school accountability.
+3. Apply the migration:
 
-## Project Structure
+```bash
+# In the Supabase SQL editor, paste the contents of:
+# supabase/migrations/0001_phase1.sql
+```
+
+This creates `profiles`, `saved_regulations`, `commented_regulations`, `regulation_cache`, and `email_preferences`.
+
+### Gemini (LLM)
+
+1. Get an API key at https://aistudio.google.com/apikey
+2. Set in `.env.local`:
+
+```bash
+GEMINI_API_KEY=AIza...
+```
+
+The app uses `gemini-2.5-flash` for all surfaces. To swap to Pro, edit `MODEL` in `app/api/llm/comment/route.ts` and `app/api/llm/summary/route.ts`.
+
+### Cron secret (only needed for non-Vercel cron triggers)
+
+The nightly summary-warming cron runs automatically on Vercel via the schedule in `vercel.json`. To trigger it manually (e.g., for local testing), set:
+
+```bash
+CRON_SECRET=any_random_string
+```
+
+Then call `curl -H "Authorization: Bearer any_random_string" http://localhost:3000/api/cron/warm-summaries`.
+
+## Deploying to Vercel
+
+1. Push to GitHub.
+2. Import the repo at https://vercel.com/new — accept defaults.
+3. In the Vercel project settings, add every variable from your `.env.local` (the same keys, the same values). Each must be set per-environment (Production, Preview, Development).
+4. Redeploy.
+5. The nightly cron in `vercel.json` runs automatically; the first 24 hours after deploy will show truncated abstracts on cards while the cache warms.
+
+Custom domain is deferred for Phase 1; the deploy lives at `<project>.vercel.app`.
+
+## Repo layout
 
 ```text
 app/
-  api/regulations/route.ts       Server-side regulations.gov fetch route
-  feed/page.tsx                  Personalized regulation feed
-  onboarding/page.tsx            Three-step civic profile flow
-  regulation/[id]/page.tsx       Regulation detail and generated comment view
+  page.tsx                       Landing
+  onboarding/page.tsx            Three-step civic profile
+  feed/page.tsx                  Personalized + searchable + filterable feed
+  regulation/[id]/page.tsx       Detail with LLM summary, provisions, comment
+  saved/page.tsx                 Bookmarked rules
+  activity/page.tsx              Commented + saved-then-closed timeline
+  settings/                      Hub + profile + email + privacy
+  privacy/, terms/               Public policy pages
+  sign-in/, sign-up/             Clerk catch-all routes
+  api/
+    regulations/                 Federal-docket proxy with searchTerm support
+    profile/                     Profile CRUD
+    saved/                       Saved-rules CRUD
+    commented/                   Commented-rules CRUD
+    email-preferences/           Email prefs CRUD
+    account/                     Export + delete
+    llm/{comment,summary,why}/   Gemini endpoints
+    cron/warm-summaries/         Nightly LLM summary backfill
 components/
-  feed/                          Feed header, cards, and sidebar rail
-  onboarding/                    Form fields, progress bar, topic chips
-  regulation/                    Generated comment and copy button
-  shared/                        Logo and agency badge
-context/
-  ProfileContext.tsx             Profile state and localStorage persistence
+  feed/                          Header, card, filter rail, trending rail
+  regulation/                    Comment composer, copy button
+  onboarding/                    Form primitives, topic chips
+  shared/                        Logo, agency badge, auth shell
+context/ProfileContext.tsx       Server-or-localStorage profile sync
+hooks/
+  useSavedRegulations.ts         Save state with optimistic updates
+  useCommentedRegulations.ts     Commented state + paste-back
 lib/
-  mock/                          Demo regulation and comment template data
-  profile.ts                     Profile storage helpers
-  ranking.ts                     Relevance scoring and deadline formatting
-  regulationsApi.ts              regulations.gov URL builder and response mapper
-  types.ts                       Shared app types
+  llm/                           Gemini client + prompts + postprocessor
+  db/                            Supabase admin queries (profiles, saved, …)
+  ranking.ts                     Keyword + agency + recency + urgency scorer
+  regulationsApi.ts              v4 URL builder + response mapper
+  config.ts                      isClerkConfigured / isSupabaseConfigured / …
+  auth.ts                        currentUserId() server helper
+  types.ts                       Topic, UserProfile, Regulation, ScoredRegulation
+middleware.ts                    Clerk middleware (passthrough when unconfigured)
+supabase/migrations/             SQL schema for Phase 1
+docs/                            FRD, project plan, build notes
+vercel.json                      Cron schedule
 ```
 
-## Notes
+## Out of scope (deferred to later phases)
 
-OpenComment is currently focused on demo clarity, not production completeness. It does not include authentication, a database, direct federal submission, analytics, moderation, or live LLM generation at request time.
+- Email digest sending, closing-soon alerts, final-rule detection (Phase 2)
+- Embeddings, story bank, free-text onboarding context (Phase 3)
+- Direct submission via the regulations.gov POST API, edit-assist, comments-like-yours (Phase 4)
+- Custom domain
+- Sentry / PostHog observability
+- Counsel review of the privacy policy and terms
 
-The larger vision is a civic tool that helps people find the rules that affect them, understand the provisions at stake, and speak in a register agencies are required to take seriously without losing the user's own voice.
+## License
+
+TBD.

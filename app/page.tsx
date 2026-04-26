@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, FileText, Megaphone, ShieldCheck } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
@@ -10,13 +8,10 @@ import { Logo } from "@/components/shared/Logo";
 
 export default function LandingPage() {
   const { profile, hydrated } = useProfile();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (hydrated && profile) {
-      router.replace("/feed");
-    }
-  }, [hydrated, profile, router]);
+  const signedIn = hydrated && !!profile;
+  const ctaHref = signedIn ? "/feed" : "/onboarding";
+  const ctaLabel = signedIn ? "Continue to your feed" : "Build your civic profile";
+  const navCtaLabel = signedIn ? "Open feed" : "Get started";
 
   return (
     <main className="min-h-screen">

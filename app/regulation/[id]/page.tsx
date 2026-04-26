@@ -29,8 +29,13 @@ export default function RegulationDetailPage() {
   const [reg, setReg] = useState<Regulation | null>(null);
   const [loading, setLoading] = useState(true);
   const { isSaved, toggle: toggleSaved } = useSavedRegulations();
-  const { isCommented, mark: markCommented, unmark: unmarkCommented } =
-    useCommentedRegulations();
+  const { isCommented } = useCommentedRegulations();
+
+  // LLM summary state
+  const [longSummary, setLongSummary] = useState<string | null>(null);
+  const [keyProvisions, setKeyProvisions] = useState<string[] | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [whyText, setWhyText] = useState<string | null>(null);
 
   useEffect(() => {
     if (hydrated && !profile) {
@@ -43,8 +48,7 @@ export default function RegulationDetailPage() {
     let cancelled = false;
     setLoading(true);
 
-    const topicsParam = encodeURIComponent(profile.topics.join(","));
-    fetch(`/api/regulations?topics=${topicsParam}`)
+    fetch(`/api/regulations`)
       .then(async (r) => {
         const json = (await r.json()) as { regulations: Regulation[] };
         if (cancelled) return;
@@ -61,6 +65,69 @@ export default function RegulationDetailPage() {
       cancelled = true;
     };
   }, [profile, decodedId]);
+
+  // LLM summary + provisions
+  useEffect(() => {
+    if (!reg) return;
+    let cancelled = false;
+    setSummaryLoading(true);
+    fetch(`/api/llm/summary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regulation: reg }),
+    })
+      .then(async (r) => {
+        if (!r.ok) {
+          if (!cancelled) {
+            setLongSummary(null);
+            setKeyProvisions(null);
+            setSummaryLoading(false);
+          }
+          return;
+        }
+        const json = (await r.json()) as {
+          longSummary: string;
+          keyProvisions: string[];
+        };
+        if (cancelled) return;
+        setLongSummary(json.longSummary);
+        setKeyProvisions(json.keyProvisions);
+        setSummaryLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLongSummary(null);
+        setKeyProvisions(null);
+        setSummaryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reg]);
+
+  // "Why in your feed" — personalized, not server-cached
+  useEffect(() => {
+    if (!reg || !profile) return;
+    let cancelled = false;
+    const matchedTopics = reg.topics.filter((t) => profile.topics.includes(t));
+    fetch(`/api/llm/why`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regulation: reg, profile, matchedTopics }),
+    })
+      .then(async (r) => {
+        if (!r.ok) return;
+        const json = (await r.json()) as { text: string };
+        if (cancelled) return;
+        setWhyText(json.text);
+      })
+      .catch(() => {
+        // silent — fall back to static text
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reg, profile]);
 
   if (!hydrated || !profile) {
     return (
@@ -240,20 +307,35 @@ export default function RegulationDetailPage() {
               <h2 className="text-xs font-medium uppercase tracking-widest text-muted">
                 In plain language
               </h2>
-              <p className="font-display mt-3 text-[1.35rem] leading-[1.55] text-ink">
-                {reg.summary}
-              </p>
+              {summaryLoading && !longSummary ? (
+                <div className="mt-3 space-y-2">
+                  <div className="skeleton h-5 w-full" />
+                  <div className="skeleton h-5 w-11/12" />
+                  <div className="skeleton h-5 w-9/12" />
+                </div>
+              ) : longSummary ? (
+                <div className="font-display mt-3 space-y-4 text-[1.15rem] leading-[1.6] text-ink">
+                  {longSummary.split(/\n\n+/).map((para, i) => (
+                    <p key={i}>{para}</p>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-display mt-3 text-[1.35rem] leading-[1.55] text-ink">
+                  {reg.summary}
+                </p>
+              )}
             </section>
 
-            {reg.provisions && reg.provisions.length > 0 && (
+            {((keyProvisions && keyProvisions.length > 0) ||
+              (reg.provisions && reg.provisions.length > 0)) && (
               <section>
                 <h2 className="text-xs font-medium uppercase tracking-widest text-muted">
-                  Key provisions affecting people like you
+                  Key provisions
                 </h2>
                 <ul className="mt-4 space-y-3">
-                  {reg.provisions.map((p, i) => (
+                  {(keyProvisions ?? reg.provisions ?? []).map((p, i) => (
                     <motion.li
-                      key={p}
+                      key={`${i}-${p.slice(0, 24)}`}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 + i * 0.05 }}
@@ -298,16 +380,23 @@ export default function RegulationDetailPage() {
                   <h3 className="font-display text-lg">
                     Why this is in your feed
                   </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-ink-600">
-                    Matched to your interests in{" "}
-                    <span className="text-ink">
-                      {reg.topics
-                        .filter((t) => profile.topics.includes(t))
-                        .join(", ") || profile.topics[0]}
-                    </span>
-                    , your location in <span className="text-ink">{profile.state}</span>
-                    , and the proximity of the comment-period deadline.
-                  </p>
+                  {whyText ? (
+                    <p className="mt-1 text-sm leading-relaxed text-ink-600">
+                      {whyText}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm leading-relaxed text-ink-600">
+                      Matched to your interests in{" "}
+                      <span className="text-ink">
+                        {reg.topics
+                          .filter((t) => profile.topics.includes(t))
+                          .join(", ") || profile.topics[0]}
+                      </span>
+                      , your location in{" "}
+                      <span className="text-ink">{profile.state}</span>, and
+                      the proximity of the comment-period deadline.
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

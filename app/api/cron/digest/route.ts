@@ -15,6 +15,7 @@ import { listAllEmailPreferences } from "@/lib/db/emailPreferences";
 import { listCommented } from "@/lib/db/commented";
 import { buildRegulationsUrl, mapApiResponse } from "@/lib/regulationsApi";
 import { rankRegulations } from "@/lib/ranking";
+import { enrichRegulationsWithSemanticScores } from "@/lib/semantic";
 import { sendEmail } from "@/lib/email/send";
 import { buildDigestEmail } from "@/lib/email/templates/digest";
 
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
   const allPrefs = await listAllEmailPreferences();
   const prefsByUser = new Map(allPrefs.map((p) => [p.userId, p]));
 
-  // Single shared regulations.gov fetch — all users share the same pool.
+  // Single shared regulations.gov fetch; all users share the same pool.
   const apiKey = process.env.REGULATIONS_GOV_API_KEY ?? "DEMO_KEY";
   const apiRes = await fetch(buildRegulationsUrl(), {
     headers: { "X-Api-Key": apiKey, Accept: "application/json" },
@@ -78,7 +79,7 @@ export async function GET(req: Request) {
       continue;
     }
     const tz = prefs?.timezone ?? "America/New_York";
-    // Note: digest_time preference is intentionally NOT enforced here —
+    // Note: digest_time preference is intentionally NOT enforced here.
     // Vercel Hobby caps cron at once per day, so we run at a single fixed
     // UTC hour and fan out to every eligible user. To honor digest_time
     // per user, switch to an hourly cron (Vercel Pro or an external
@@ -108,7 +109,11 @@ export async function GET(req: Request) {
       (await listCommented(profile.userId)).map((c) => c.documentId),
     );
     const muted = new Set(prefs?.mutedTopics ?? []);
-    const ranked = rankRegulations(allRegs, profile)
+    const semanticRegs = await enrichRegulationsWithSemanticScores(
+      profile.userId,
+      allRegs,
+    );
+    const ranked = rankRegulations(semanticRegs, profile)
       .filter((r) => r.score > 0)
       .filter((r) => !commented.has(r.id))
       .filter((r) => r.topics.every((t) => !muted.has(t)) || r.topics.length === 0);

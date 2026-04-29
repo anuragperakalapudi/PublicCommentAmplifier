@@ -154,7 +154,7 @@ export async function GET(req: Request) {
           finalRuleDocumentId: rule.id,
           finalRuleTitle: rule.attributes?.title ?? "Final rule posted",
           agencyName: agencyDisplayName(
-            rule.attributes?.agencyId ?? "—",
+            rule.attributes?.agencyId ?? "?",
           ),
           originalDocumentId: originalEngagement?.docId,
         });

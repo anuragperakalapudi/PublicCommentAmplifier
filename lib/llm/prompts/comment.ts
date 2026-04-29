@@ -1,4 +1,4 @@
-import type { Regulation, UserProfile } from "@/lib/types";
+import type { Regulation, Story, UserProfile } from "@/lib/types";
 
 export type CommentVariant = "balanced" | "shorter" | "personal";
 
@@ -39,6 +39,8 @@ Forbidden:
 - Any sentence over 35 words.
 - Stating support or opposition with no reason grounded in the user's life.
 - Inventing facts. Use only what's in the USER PROFILE and RULE sections.
+- If USER STORIES are provided, use them only when relevant. Do not invent
+  experiences beyond the story text.
 
 If the user has thin context, write a thinner comment. Don't pad.`;
 
@@ -46,17 +48,39 @@ export function buildCommentPrompt(
   reg: Regulation,
   profile: UserProfile,
   variant: CommentVariant,
+  stories: Story[] = [],
 ): { systemInstruction: string; prompt: string } {
   const directive = VARIANT_DIRECTIVES[variant];
 
-  const profileBlock = [
+  const profileLines = [
     `- Age range: ${profile.ageRange}`,
     `- Occupation: ${profile.occupation}`,
     `- State: ${profile.state}`,
     `- Income: ${profile.income}`,
     `- Household: ${profile.household}`,
     `- Topics they care about: ${profile.topics.join(", ")}`,
-  ].join("\n");
+  ];
+  if (profile.additionalStates && profile.additionalStates.length > 0) {
+    profileLines.push(
+      `- Additional states they care about: ${profile.additionalStates.join(", ")}`,
+    );
+  }
+  if (profile.freeTextContext) {
+    profileLines.push(`- Other context they shared: "${profile.freeTextContext}"`);
+  }
+  const profileBlock = profileLines.join("\n");
+
+  const storyBlock = stories.length
+    ? stories
+        .map((story, i) =>
+          [
+            `Story ${i + 1}: ${story.title}`,
+            `Topics: ${story.tags.join(", ") || "(none)"}`,
+            story.body,
+          ].join("\n"),
+        )
+        .join("\n\n")
+    : "";
 
   const ruleBlock = [
     `Title: ${reg.title}`,
@@ -83,6 +107,12 @@ export function buildCommentPrompt(
     `USER PROFILE`,
     profileBlock,
     "",
+    storyBlock ? `USER STORIES` : "",
+    storyBlock,
+    storyBlock
+      ? "Use story details only when they apply to this rule. Paraphrase rather than quote at length."
+      : "",
+    storyBlock ? "" : "",
     `RULE`,
     ruleBlock,
     "",

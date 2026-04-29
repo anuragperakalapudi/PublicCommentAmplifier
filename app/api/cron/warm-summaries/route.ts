@@ -11,8 +11,9 @@ import {
   getCachedShortSummaries,
   upsertRegulationCache,
 } from "@/lib/db/cache";
+import { ensureRegulationEmbedding } from "@/lib/semantic";
 
-// Vercel Cron protection — when running on Vercel, requests carry a known
+// Vercel Cron protection: when running on Vercel, requests carry a known
 // "x-vercel-cron" header. Locally / via curl we accept a bearer token.
 function isAuthorized(req: Request): boolean {
   if (req.headers.get("x-vercel-cron")) return true;
@@ -22,6 +23,7 @@ function isAuthorized(req: Request): boolean {
 }
 
 const MAX_GENERATIONS_PER_RUN = 80;
+const MAX_EMBEDDINGS_PER_RUN = 80;
 const MODEL = "gemini-2.5-flash" as const;
 
 export async function GET(req: Request) {
@@ -86,6 +88,18 @@ export async function GET(req: Request) {
     }
   }
 
+  let embeddingsGenerated = 0;
+  let embeddingsFailed = 0;
+  for (const reg of regulations) {
+    if (embeddingsGenerated >= MAX_EMBEDDINGS_PER_RUN) break;
+    try {
+      const didGenerate = await ensureRegulationEmbedding(reg);
+      if (didGenerate) embeddingsGenerated++;
+    } catch {
+      embeddingsFailed++;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     fetched: regulations.length,
@@ -93,5 +107,7 @@ export async function GET(req: Request) {
     coldRemaining: cold.length - generated,
     generated,
     failed,
+    embeddingsGenerated,
+    embeddingsFailed,
   });
 }

@@ -7,8 +7,9 @@ import { Bookmark, ExternalLink } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { useSavedRegulations } from "@/hooks/useSavedRegulations";
 import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
-import { rankRegulations } from "@/lib/ranking";
-import type { Regulation, ScoredRegulation } from "@/lib/types";
+import { deriveWeights, rankRegulations } from "@/lib/ranking";
+import type { Regulation } from "@/lib/types";
+import { useRankingFeedback } from "@/hooks/useRankingFeedback";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import {
   RegulationCard,
@@ -27,7 +28,8 @@ export default function SavedPage() {
     toggle: toggleSaved,
   } = useSavedRegulations();
   const { isCommented } = useCommentedRegulations();
-  const [pool, setPool] = useState<ScoredRegulation[]>([]);
+  const { feedback, set: setRankingSignal } = useRankingFeedback();
+  const [pool, setPool] = useState<Regulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -43,7 +45,7 @@ export default function SavedPage() {
       .then(async (r) => {
         const json = (await r.json()) as { regulations: Regulation[] };
         if (cancelled) return;
-        setPool(rankRegulations(json.regulations, profile));
+        setPool(json.regulations);
         setLoading(false);
       })
       .catch(() => {
@@ -56,15 +58,39 @@ export default function SavedPage() {
     };
   }, [profile]);
 
+  const feedbackEntries = useMemo(
+    () =>
+      Array.from(feedback.entries()).map(([documentId, signal]) => ({
+        documentId,
+        signal,
+      })),
+    [feedback],
+  );
+
+  const rulesById = useMemo(
+    () => new Map(pool.map((reg) => [reg.id, reg])),
+    [pool],
+  );
+
+  const feedbackWeights = useMemo(
+    () => deriveWeights(feedbackEntries, rulesById),
+    [feedbackEntries, rulesById],
+  );
+
+  const rankedPool = useMemo(
+    () => (profile ? rankRegulations(pool, profile, feedbackWeights) : []),
+    [feedbackWeights, pool, profile],
+  );
+
   const savedRegs = useMemo(() => {
-    return pool
+    return rankedPool
       .filter((r) => saved.has(r.id))
       .sort(
         (a, b) =>
           new Date(a.commentEndDate).getTime() -
           new Date(b.commentEndDate).getTime(),
       );
-  }, [pool, saved]);
+  }, [rankedPool, saved]);
 
   // Reset pagination when the saved set changes
   useEffect(() => {
@@ -143,6 +169,8 @@ export default function SavedPage() {
                 saved={isSaved(reg.id)}
                 commented={isCommented(reg.id)}
                 onToggleSaved={toggleSaved}
+                signal={feedback.get(reg.id) ?? null}
+                onSetSignal={(signal) => setRankingSignal(reg.id, signal)}
               />
             ))}
             {remainingSaved > 0 && (

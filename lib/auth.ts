@@ -4,7 +4,7 @@ import { isClerkConfigured } from "./config";
 // configured (or the request is unauthenticated).
 //
 // We dynamic-import @clerk/nextjs/server so the package is only loaded when
-// keys exist — otherwise Clerk's runtime checks would throw at import time.
+// keys exist; otherwise Clerk's runtime checks would throw at import time.
 export async function currentUserId(): Promise<string | null> {
   if (!isClerkConfigured) return null;
   const { auth } = await import("@clerk/nextjs/server");

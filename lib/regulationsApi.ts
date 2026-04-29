@@ -168,7 +168,7 @@ export function buildRegulationsUrl(searchTerm?: string): string {
 }
 
 const AGENCY_TO_TOPICS: Record<string, Topic[]> = {
-  // HHS family — Healthcare-leaning
+  // HHS family, Healthcare-leaning
   HHS: ["Healthcare", "Disability"],
   CMS: ["Healthcare"],
   FDA: ["Healthcare", "Consumer Protection"],
@@ -373,7 +373,7 @@ export function mapApiResponse(
         (a.docAbstract && a.docAbstract.trim()) ||
         truncate(title, 240);
       const text = `${title} ${a.docAbstract ?? ""}`.toLowerCase();
-      const agencyId = a.agencyId ?? "—";
+      const agencyId = a.agencyId ?? "?";
 
       const inferredTopics = new Set<Topic>(AGENCY_TO_TOPICS[agencyId] ?? []);
       for (const topic of ALL_TOPICS_LIST) {

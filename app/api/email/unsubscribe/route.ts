@@ -96,7 +96,7 @@ async function handle(req: Request): Promise<Response> {
   return htmlPage({ ok: true, kind, message: friendly });
 }
 
-// GET — handles human-clicked unsubscribe links (browser navigation).
+// GET handles human-clicked unsubscribe links (browser navigation).
 export async function GET(req: Request) {
   const accept = req.headers.get("accept") ?? "";
   // If the client wants JSON (an email-validator bot, say), respond JSON.
@@ -120,7 +120,7 @@ export async function GET(req: Request) {
   return handle(req);
 }
 
-// POST — RFC 8058 one-click unsubscribe (List-Unsubscribe-Post header
+// POST is RFC 8058 one-click unsubscribe (List-Unsubscribe-Post header
 // causes mail clients to POST to this URL).
 export async function POST(req: Request) {
   return handle(req);

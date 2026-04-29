@@ -53,7 +53,7 @@ export default function ActivityPage() {
         setFinalRuleEvents(json.events);
       })
       .catch(() => {
-        // silent — section just stays empty
+        // silent: section just stays empty
       });
     return () => {
       cancelled = true;

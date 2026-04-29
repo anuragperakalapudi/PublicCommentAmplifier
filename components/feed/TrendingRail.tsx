@@ -56,7 +56,7 @@ export function TrendingRail({
             ? "live"
             : source === "error"
               ? "unavailable"
-              : "—"}
+              : "n/a"}
         </span>{" "}
         · cached 5 min
       </p>

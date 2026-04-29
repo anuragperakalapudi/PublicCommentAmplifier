@@ -117,7 +117,7 @@ export default function SettingsPrivacyPage() {
             <Field label="Household" value={profile.household} />
             <Field
               label="Topics"
-              value={profile.topics.join(", ") || "—"}
+              value={profile.topics.join(", ") || "none"}
             />
             <Field
               label="Member since"
@@ -212,7 +212,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-widest text-muted">{label}</dt>
-      <dd className="mt-1 text-sm text-ink">{value || "—"}</dd>
+      <dd className="mt-1 text-sm text-ink">{value || "none"}</dd>
     </div>
   );
 }

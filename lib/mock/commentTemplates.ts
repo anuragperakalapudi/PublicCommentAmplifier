@@ -31,15 +31,15 @@ const householdLine = (profile: UserProfile) => {
     case "Married, no kids":
       return "My spouse and I weigh every change to federal policy against a household budget that has very little slack.";
     case "Living with family":
-      return "Like millions of multi-generational households, ours absorbs whatever the federal system fails to do — when policy fails, family fills the gap, until it can't.";
+      return "Like millions of multi-generational households, ours absorbs whatever the federal system fails to do. When policy fails, family fills the gap, until it can't.";
     default:
-      return "I am one of many Americans for whom federal rules like this one are not abstract — they show up in my paycheck, my health coverage, and my rent.";
+      return "I am one of many Americans for whom federal rules like this one are not abstract. They show up in my paycheck, my health coverage, and my rent.";
   }
 };
 
 const ageLine = (profile: UserProfile) => {
   if (profile.ageRange === "65+")
-    return "At my age, the stakes of this rule are not theoretical — they determine the quality of the years I have left.";
+    return "At my age, the stakes of this rule are not theoretical. They determine the quality of the years I have left.";
   if (profile.ageRange === "55–64")
     return "I am close enough to retirement that the long-term effects of this rule will land squarely on me, not on some future generation.";
   if (profile.ageRange === "18–24" || profile.ageRange === "25–34")
@@ -49,7 +49,7 @@ const ageLine = (profile: UserProfile) => {
 
 const incomeLine = (profile: UserProfile) => {
   if (profile.income === "Under $25k" || profile.income === "$25k–$50k")
-    return "On my income, the difference between the proposed rule and the status quo is not a policy preference — it is groceries, prescriptions, or rent.";
+    return "On my income, the difference between the proposed rule and the status quo is not a policy preference. It is groceries, prescriptions, or rent.";
   if (profile.income === "$50k–$100k")
     return "I am middle-income, which means I am usually invisible in this kind of process: too well-off to qualify for most assistance, too far from wealthy to absorb federal mistakes without consequence.";
   if (profile.income === "$100k–$200k")
@@ -62,7 +62,7 @@ export function buildComment(
   profile: UserProfile,
   variant: "balanced" | "shorter" | "personal" = "balanced",
 ): string {
-  const opener = `Re: ${reg.id} — ${reg.title}`;
+  const opener = `Re: ${reg.id}: ${reg.title}`;
   const intro = occupationLine(profile.occupation, profile.state);
   const stake = householdLine(profile);
   const age = ageLine(profile);
@@ -75,18 +75,18 @@ export function buildComment(
         : i === 1
         ? "Second, I want to address another piece of this rule that affects people like me:"
         : "Finally, I want to flag one more provision that the agency should weigh carefully:";
-    return `${lead} "${p}." From where I sit, this would mean a meaningful, concrete change in my day-to-day life — not in the abstract, but in the small calculations I make every week.`;
+    return `${lead} "${p}." From where I sit, this would mean a meaningful, concrete change in my day-to-day life, not in the abstract, but in the small calculations I make every week.`;
   });
 
   const ask =
     variant === "shorter"
       ? `For these reasons, I urge the ${reg.agencyName} to finalize the strongest possible version of this proposal, and to take seriously the lived experience of ordinary Americans, not just the structured input of well-resourced trade associations.`
-      : `For these reasons, I respectfully urge the ${reg.agencyName} to (1) finalize the strongest possible version of this proposal, (2) build in the implementation timelines and protections necessary so that real people — not only entities with full-time compliance staff — can benefit, and (3) document, in the final rule's preamble, how comments like this one shaped the outcome.`;
+      : `For these reasons, I respectfully urge the ${reg.agencyName} to (1) finalize the strongest possible version of this proposal, (2) build in the implementation timelines and protections necessary so that real people, not only entities with full-time compliance staff, can benefit, and (3) document, in the final rule's preamble, how comments like this one shaped the outcome.`;
 
   const close =
     "Thank you for the opportunity to participate in this rulemaking. The notice-and-comment process only works if the people who live under these rules are heard alongside the lobbyists who draft them.";
 
-  const sig = `Respectfully,\nA member of the public — ${stateName(profile.state)}`;
+  const sig = `Respectfully,\nA member of the public, ${stateName(profile.state)}`;
 
   if (variant === "shorter") {
     return [opener, "", intro, stake, ...provisionLines.slice(0, 1), ask, close, sig].join("\n\n");

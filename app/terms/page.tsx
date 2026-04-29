@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 
 export const metadata = {
-  title: "Terms — OpenComment",
+  title: "Terms · OpenComment",
   description: "Terms of service for OpenComment.",
 };
 

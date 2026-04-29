@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Clock, ArrowUpRight, Bookmark, BookmarkCheck, CheckCircle2 } from "lucide-react";
-import type { ScoredRegulation } from "@/lib/types";
+import {
+  Clock,
+  ArrowUpRight,
+  Bookmark,
+  BookmarkCheck,
+  CheckCircle2,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
+import type { RankingSignal, ScoredRegulation } from "@/lib/types";
 import { formatDeadline, matchPercent } from "@/lib/ranking";
 import { AgencyBadge } from "@/components/shared/AgencyBadge";
 
@@ -14,6 +22,8 @@ export function RegulationCard({
   saved,
   commented,
   onToggleSaved,
+  signal = null,
+  onSetSignal,
 }: {
   reg: ScoredRegulation;
   topicCount: number;
@@ -21,6 +31,8 @@ export function RegulationCard({
   saved: boolean;
   commented: boolean;
   onToggleSaved: (documentId: string) => void;
+  signal?: RankingSignal | null;
+  onSetSignal?: (signal: RankingSignal | null) => void;
 }) {
   const pct = matchPercent(reg.score, topicCount);
   const deadline = formatDeadline(reg.commentEndDate);
@@ -35,6 +47,13 @@ export function RegulationCard({
     e.stopPropagation();
     onToggleSaved(reg.id);
   };
+
+  const handleSignalClick =
+    (nextSignal: RankingSignal) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onSetSignal?.(signal === nextSignal ? null : nextSignal);
+    };
 
   return (
     <motion.article
@@ -105,7 +124,7 @@ export function RegulationCard({
           {reg.summary}
         </p>
 
-        <div className="mt-5 flex items-center justify-between border-t border-rule pt-4">
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-rule pt-4">
           <div className="flex flex-wrap items-center gap-1.5">
             {reg.matchedTopics.slice(0, 3).map((t) => (
               <span key={t} className="chip">
@@ -119,10 +138,44 @@ export function RegulationCard({
                 </span>
               ))}
           </div>
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-accent transition group-hover:gap-2">
-            Read & comment
-            <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </span>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {onSetSignal && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleSignalClick("more_like")}
+                  aria-pressed={signal === "more_like"}
+                  aria-label="Show me more like this"
+                  title="Show me more like this"
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                    signal === "more_like"
+                      ? "border-forest bg-forest text-cream-50"
+                      : "border-rule bg-paper text-muted hover:border-forest/40 hover:text-forest"
+                  }`}
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignalClick("less_like")}
+                  aria-pressed={signal === "less_like"}
+                  aria-label="Show me less like this"
+                  title="Show me less like this"
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                    signal === "less_like"
+                      ? "border-accent bg-accent text-cream-50"
+                      : "border-rule bg-paper text-muted hover:border-accent/40 hover:text-accent"
+                  }`}
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-accent transition group-hover:gap-2">
+              Read & comment
+              <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </span>
+          </div>
         </div>
       </Link>
     </motion.article>

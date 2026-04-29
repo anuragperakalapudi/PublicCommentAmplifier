@@ -1,198 +1,221 @@
 # OpenComment
 
-OpenComment helps ordinary Americans find federal proposed rules that affect their lives and submit substantive public comments to the official record at regulations.gov.
+A civic web application that surfaces federal proposed rules from regulations.gov, ranks them against a user's profile, and helps the user submit a substantive public comment to the federal record.
 
-This repository is the Phase 1 production build: real LLM-drafted comments, persistent saved/commented state, magic-link auth, and Vercel deployment. See [`docs/`](docs/) for the full FRD and project plan.
+Stack: Next.js 14 App Router, TypeScript, Clerk, Supabase Postgres, Gemini, Vercel Cron, Resend.
 
-## Mission
+## Status
 
-Trade associations and lobbyists routinely participate in federal rulemaking. Ordinary citizens almost never do, despite having the legal right and a meaningful potential impact. OpenComment closes that gap.
-
-Three commitments shape every product decision:
-
-- **Anti-astroturf by construction.** Every comment is anchored to a real, signed-in user's lived situation, drafted from facts they entered, and submitted by them through their own session on regulations.gov. The product never auto-submits and never generates identical text across users.
-- **Privacy as primary UX.** Layered consent, plain-English data controls, and one-click deletion are core product surfaces, not legal afterthoughts.
-- **Outputs that don't read as AI.** Every LLM surface ships with a tuned system prompt, a banned-phrase post-processor, and a quality gate.
-
-## Phase 1 features
-
-- Magic-link sign-in via Clerk (with localStorage fallback when keys aren't set)
-- Profile, saved-rules, commented-rules, regulation cache, and email preferences in Supabase Postgres
-- Gemini-powered comment drafting with three structural variants and an em-dash + banned-phrase quality gate
-- Gemini-powered plain-language summaries (3 paragraphs) and key provisions on the detail page
-- Gemini-powered one-line feed summaries warmed nightly via Vercel Cron and cached forever per document
-- Personalized "why this is in your feed" generated on demand
-- Hybrid feed search: server-side `filter[searchTerm]` first, client-side substring fallback for fuzzy matches
-- Filter rail: agency, topic, deadline urgency, match score, state relevance
-- 102 federal agencies mapped to topics for richer feed coverage
-- 13 topics (added Civil Rights, Tax & Finance, Public Safety, Consumer Protection)
-- Settings hub: profile editor, email preferences, privacy & data (export + one-click delete)
-- Privacy policy and terms of service pages
-
-## Tech stack
-
-| Layer | Choice |
+| Surface | Status |
 |---|---|
-| Framework | Next.js 14 App Router |
-| Language | TypeScript (strict) |
-| Auth | Clerk (magic-link) |
-| Database | Supabase Postgres |
-| LLM | Gemini 2.5 Flash via `@google/generative-ai` |
-| Federal data | regulations.gov v4 API |
-| Cron | Vercel Cron |
-| Styling | Tailwind + CSS variables |
-| Animation | Framer Motion |
-| Icons | Lucide React |
+| Phase 1 (auth, persistence, LLM drafting, summaries, save/commented, search, filters, settings, privacy/terms) | Shipped |
+| Phase 2 (digest email, closing-soon alerts, final-rule detection) | Shipped, dormant until `RESEND_API_KEY` is provisioned |
+| Phase 3 (free-text context, story bank, embeddings, multi-state) | Not started |
+| Phase 4 (edit-assist, direct submission, comments-like-yours) | Not started |
 
-## Run locally
+Each external service (Clerk, Supabase, Gemini, Resend) has a graceful fallback. Routes that require an unconfigured service return HTTP 501 and the UI degrades to a localStorage-only equivalent. Production functionality requires all four to be provisioned.
+
+## Architecture
+
+```
+Browser  ──► Next.js App Router (Vercel)
+              │
+              ├─ Middleware: Clerk session gate
+              │
+              ├─ Pages: /, /onboarding, /feed, /regulation/[id],
+              │         /saved, /activity, /settings/*, /privacy, /terms,
+              │         /sign-in, /sign-up
+              │
+              └─ API routes:
+                   /api/regulations          regulations.gov v4 proxy + cache
+                   /api/profile              profile CRUD
+                   /api/saved                saved-rules CRUD
+                   /api/commented            commented-rules CRUD
+                   /api/email-preferences    user email prefs CRUD
+                   /api/account              JSON export + account delete
+                   /api/llm/{comment,summary,why}
+                                             Gemini endpoints with quality gate
+                   /api/email/unsubscribe    RFC 8058 one-click unsubscribe
+                   /api/cron/warm-summaries  nightly LLM short-summary backfill
+                   /api/cron/digest          digest fan-out
+                   /api/cron/closing-soon    7/3/1-day deadline alerts
+                   /api/cron/final-rule      docket polling for final rules
+                   /api/final-rule-events    feeds the activity timeline
+
+External services
+  Clerk          Magic-link auth, user identity
+  Supabase       Postgres for profiles, save/commented state, LLM cache,
+                 email preferences, docket watch list, email send log
+  Gemini         text-embedding (Phase 3) and gemini-2.5-flash for prose
+  regulations.gov v4 API
+                 Federal docket data
+  Resend         Transactional email; Phase 2 only
+```
+
+LLM output passes through a postprocessor (`lib/llm/postprocess.ts`) that strips em dashes, flags banned phrases, enforces a 35-word sentence ceiling, and retries up to twice before surfacing the result with quality-gate flags for the user to review.
+
+## Quick start
 
 ```bash
 npm install
 cp .env.local.example .env.local
-# Fill in any keys you have — see "Optional service setup" below.
+# Populate .env.local with the keys listed below; any missing key triggers
+# graceful degradation rather than a hard failure.
 npm run dev
 ```
 
-Open http://localhost:3000.
+The dev server runs at `http://localhost:3000`. First request after a cold start in dev mode triggers a Webpack compile and may take 10 to 20 seconds; subsequent navigations are sub-second.
 
-The app degrades gracefully when service keys aren't set:
+## Configuration
 
-| Service | Without key | With key |
+All env vars are documented in [`.env.local.example`](.env.local.example). Names and purposes:
+
+| Variable | Required for | Notes |
 |---|---|---|
-| Clerk | Profile in localStorage; sign-in pages show a "not configured" message | Real magic-link auth, multi-device profile sync |
-| Supabase | All persistence in localStorage; activity/saved/commented work on this device only | Full Postgres-backed persistence and account export/delete |
-| Gemini | Template-based comment drafting; truncated rule abstracts; static "why in feed" copy | Real LLM-drafted comments, plain-language summaries, key provisions, personalized "why" |
+| `REGULATIONS_GOV_API_KEY` | Production traffic | Falls back to `DEMO_KEY` (rate-limited). Free at https://api.data.gov/signup/. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Auth | Public, ships in client bundle. Free tier covers 10k MAU. |
+| `CLERK_SECRET_KEY` | Auth | Server-side only. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Persistence | Public. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Persistence | Public. RLS protects the data. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Persistence | Server-side only. Bypasses RLS for trusted route handlers. |
+| `GEMINI_API_KEY` | LLM features | Free tier: 15 RPM, 1500 RPD on Flash. |
+| `RESEND_API_KEY` | Phase 2 email | Free tier: 3000 emails/month, 100/day. |
+| `RESEND_FROM_EMAIL` | Phase 2 email | Must be a verified Resend sender. Defaults to `OpenComment <hello@opencomment.org>`. |
+| `NEXT_PUBLIC_APP_URL` | Email link generation | Set to the canonical deploy URL in production. |
+| `CRON_SECRET` | Manual cron triggers | Optional. Vercel Cron auto-authenticates via the `x-vercel-cron` header. |
 
-You can run with any combination — e.g., Gemini on but Supabase off — and each surface degrades independently.
+Vars prefixed with `NEXT_PUBLIC_` are inlined into the client bundle at build time. All other vars stay server-side.
 
-## Optional service setup
+## Database
 
-### regulations.gov API key
+The app expects three migrations to have been applied to the Supabase project, in order:
 
-The app uses `DEMO_KEY` if no key is set. For production traffic, get a free key:
+1. [`supabase/migrations/0001_phase1.sql`](supabase/migrations/0001_phase1.sql): `profiles`, `saved_regulations`, `commented_regulations`, `regulation_cache`, `email_preferences`.
+2. [`supabase/migrations/0002_display_name.sql`](supabase/migrations/0002_display_name.sql): adds `profiles.display_name`.
+3. [`supabase/migrations/0003_phase2.sql`](supabase/migrations/0003_phase2.sql): `docket_watch`, `email_log`; adds `regulation_cache.docket_id`, plus quiet-hours and email-address columns on `email_preferences`.
 
-```bash
-# https://api.data.gov/signup/
-REGULATIONS_GOV_API_KEY=your_key_here
-```
+Apply each via the Supabase SQL Editor (Project → SQL Editor → New query → paste → Run). When prompted, select **Run and enable RLS**. The application accesses Supabase exclusively through the service-role key, which bypasses RLS, so existing queries continue to function. Enabling RLS prevents the public anon key from reading or writing the tables.
 
-### Clerk (auth)
+No migration runner is bundled. Future migrations should be applied in numeric order before deploying any code that depends on them.
 
-1. Create an application at https://dashboard.clerk.com
-2. Copy the publishable key and secret key into `.env.local`:
+## Deployment (Vercel)
 
-```bash
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-```
+1. Push the repository to GitHub.
+2. Import the repo at https://vercel.com/new. Accept the auto-detected Next.js framework settings.
+3. Under **Project Settings → Environment Variables**, add every variable from `.env.local`. Set each one for **Production**, **Preview**, and **Development** so PR previews and local Vercel CLI runs work.
+4. Set `NEXT_PUBLIC_APP_URL` to the canonical deploy URL. Without it, email links resolve to `http://localhost:3000`.
+5. Apply the three Supabase migrations if not already applied.
+6. Deploy.
 
-Restart the dev server. Sign-in / sign-up routes now use Clerk's hosted UI; protected routes (`/feed`, `/saved`, `/activity`, `/settings`) require auth.
+### Cron jobs
 
-### Supabase (database)
+`vercel.json` declares four daily crons:
 
-1. Create a project at https://supabase.com
-2. Copy the project URL and keys into `.env.local`:
+| Path | Schedule (UTC) | Purpose |
+|---|---|---|
+| `/api/cron/warm-summaries` | `0 8 * * *` | Generates LLM short summaries for newly-posted rules; idempotent. |
+| `/api/cron/digest` | `0 13 * * *` | Fans out personalized digest emails to eligible users. |
+| `/api/cron/closing-soon` | `0 12 * * *` | Sends 7-day, 3-day, and 1-day deadline reminders for saved rules. |
+| `/api/cron/final-rule` | `30 9 * * *` | Polls dockets the user has engaged with and emails when a final rule is published. |
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-```
+Vercel Hobby permits daily-frequency cron only. To honor user-specific `digest_time` preferences (which require hourly fan-out), upgrade to Pro or proxy the digest route from an external scheduler (e.g., cron-job.org) authenticated with `CRON_SECRET`.
 
-3. Apply the migration:
+The `final-rule` route caps polling at 60 dockets per invocation to stay within the regulations.gov 1000-requests-per-hour limit.
 
-```bash
-# In the Supabase SQL editor, paste the contents of:
-# supabase/migrations/0001_phase1.sql
-```
+### Custom domain
 
-This creates `profiles`, `saved_regulations`, `commented_regulations`, `regulation_cache`, and `email_preferences`.
+Not currently configured. The deploy lives at `<project>.vercel.app`. Adding a custom domain is a project setting on Vercel; once configured, update `NEXT_PUBLIC_APP_URL` and the Resend sender domain to match.
 
-### Gemini (LLM)
-
-1. Get an API key at https://aistudio.google.com/apikey
-2. Set in `.env.local`:
-
-```bash
-GEMINI_API_KEY=AIza...
-```
-
-The app uses `gemini-2.5-flash` for all surfaces. To swap to Pro, edit `MODEL` in `app/api/llm/comment/route.ts` and `app/api/llm/summary/route.ts`.
-
-### Cron secret (only needed for non-Vercel cron triggers)
-
-The nightly summary-warming cron runs automatically on Vercel via the schedule in `vercel.json`. To trigger it manually (e.g., for local testing), set:
+## Local development
 
 ```bash
-CRON_SECRET=any_random_string
+npm run dev          # Next.js dev server with HMR
+npm run build        # Production build (Next.js compiler + ESLint + tsc)
+npm run lint         # ESLint via next lint
+npm start            # Serve the production build
+npx tsc --noEmit     # Type-check without emitting
 ```
 
-Then call `curl -H "Authorization: Bearer any_random_string" http://localhost:3000/api/cron/warm-summaries`.
+To trigger a cron route manually for testing, set `CRON_SECRET` in `.env.local` and invoke:
 
-## Deploying to Vercel
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/warm-summaries
+```
 
-1. Push to GitHub.
-2. Import the repo at https://vercel.com/new — accept defaults.
-3. In the Vercel project settings, add every variable from your `.env.local` (the same keys, the same values). Each must be set per-environment (Production, Preview, Development).
-4. Redeploy.
-5. The nightly cron in `vercel.json` runs automatically; the first 24 hours after deploy will show truncated abstracts on cards while the cache warms.
+## Project structure
 
-Custom domain is deferred for Phase 1; the deploy lives at `<project>.vercel.app`.
-
-## Repo layout
-
-```text
+```
 app/
   page.tsx                       Landing
-  onboarding/page.tsx            Three-step civic profile
-  feed/page.tsx                  Personalized + searchable + filterable feed
-  regulation/[id]/page.tsx       Detail with LLM summary, provisions, comment
+  onboarding/page.tsx            Three-step civic profile flow
+  feed/page.tsx                  Personalized, searchable, filterable feed
+  regulation/[id]/page.tsx       Rule detail with LLM summary and composer
   saved/page.tsx                 Bookmarked rules
-  activity/page.tsx              Commented + saved-then-closed timeline
+  activity/page.tsx              Commented, saved-closed, final-rule timeline
   settings/                      Hub + profile + email + privacy
   privacy/, terms/               Public policy pages
   sign-in/, sign-up/             Clerk catch-all routes
   api/
-    regulations/                 Federal-docket proxy with searchTerm support
-    profile/                     Profile CRUD
-    saved/                       Saved-rules CRUD
-    commented/                   Commented-rules CRUD
-    email-preferences/           Email prefs CRUD
-    account/                     Export + delete
-    llm/{comment,summary,why}/   Gemini endpoints
-    cron/warm-summaries/         Nightly LLM summary backfill
+    regulations/                 Federal-docket proxy with hybrid search
+    profile/, saved/, commented/, email-preferences/, account/
+                                 CRUD endpoints
+    llm/{comment,summary,why}/   Gemini endpoints with quality gate
+    final-rule-events/           Feeds the activity timeline
+    email/unsubscribe/           RFC 8058 one-click unsubscribe
+    cron/{warm-summaries,digest,closing-soon,final-rule}/
+                                 Vercel-scheduled jobs
+
 components/
   feed/                          Header, card, filter rail, trending rail
   regulation/                    Comment composer, copy button
-  onboarding/                    Form primitives, topic chips
+  onboarding/                    Form primitives, topic chips, progress bar
   shared/                        Logo, agency badge, auth shell
-context/ProfileContext.tsx       Server-or-localStorage profile sync
+
+context/ProfileContext.tsx       Server-then-localStorage profile sync
+
 hooks/
-  useSavedRegulations.ts         Save state with optimistic updates
-  useCommentedRegulations.ts     Commented state + paste-back
+  useSavedRegulations.ts
+  useCommentedRegulations.ts
+
 lib/
   llm/                           Gemini client + prompts + postprocessor
-  db/                            Supabase admin queries (profiles, saved, …)
-  ranking.ts                     Keyword + agency + recency + urgency scorer
+  db/                            Supabase admin queries
+  email/                         Resend wrapper, send log, HTML+text templates
+  ranking.ts                     Scoring (keyword + agency + recency + urgency)
   regulationsApi.ts              v4 URL builder + response mapper
-  config.ts                      isClerkConfigured / isSupabaseConfigured / …
-  auth.ts                        currentUserId() server helper
-  types.ts                       Topic, UserProfile, Regulation, ScoredRegulation
-middleware.ts                    Clerk middleware (passthrough when unconfigured)
-supabase/migrations/             SQL schema for Phase 1
+  config.ts                      Service-configured flags
+  auth.ts                        Server-side currentUserId / getUserEmail
+  cron-auth.ts                   Cron route authentication helpers
+  types.ts                       Topic, UserProfile, Regulation, etc.
+
+middleware.ts                    Clerk middleware; passthrough when unconfigured
+supabase/migrations/             Numeric SQL migrations
 docs/                            FRD, project plan, build notes
 vercel.json                      Cron schedule
 ```
 
-## Out of scope (deferred to later phases)
+## Design principles
 
-- Email digest sending, closing-soon alerts, final-rule detection (Phase 2)
-- Embeddings, story bank, free-text onboarding context (Phase 3)
-- Direct submission via the regulations.gov POST API, edit-assist, comments-like-yours (Phase 4)
-- Custom domain
+1. **No auto-submission.** The application never POSTs comments to regulations.gov. The user copies the draft, opens regulations.gov in a new tab, and submits manually under their own session.
+2. **Profile-anchored output.** LLM-drafted comments cite the user's profile fields and (when present) their personal stories. Drafts are not generated for unauthenticated visitors.
+3. **Anti-AI tells.** Every LLM surface is post-processed to strip em dashes, banned phrases, and overlong sentences. Failed gates trigger up to two regenerations before surfacing with a flag.
+4. **Graceful degradation.** Each external dependency has a configured-flag check. Missing configuration produces a clear "not configured" response rather than a runtime failure.
+5. **Private by default.** All third-party traffic is server-side. The anon Supabase key is RLS-protected. Account deletion is one click and cascades across all tables.
+
+## Out of scope
+
+The following are intentionally not part of the current build and are tracked in `docs/FRD.md`:
+
+- Comment submission via the regulations.gov POST API (Phase 4)
+- AI-assisted comment editing with inline annotations (Phase 4)
+- "Comments like yours" preview from `/v4/comments` (Phase 4)
+- Embedding-based semantic ranking, story bank, multi-state support, adaptive interview (Phase 3)
+- Profile picture upload (FRD §3.2 Tier 4)
+- Match-score distribution sparkline above the slider (FRD §3.3)
 - Sentry / PostHog observability
-- Counsel review of the privacy policy and terms
+- Counsel review of `/privacy` and `/terms`
 
 ## License
 
-TBD.
+Not yet specified.

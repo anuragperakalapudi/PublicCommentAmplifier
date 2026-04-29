@@ -1,4 +1,5 @@
 import type { UserProfile } from "../types";
+import { parseVector, vectorToSql } from "../embeddingInputs";
 import { supabaseAdmin } from "./client";
 
 interface DbProfileRow {
@@ -10,8 +11,18 @@ interface DbProfileRow {
   income_bracket: string | null;
   household: string | null;
   topics: string[];
+  free_text_context: string | null;
+  additional_states: string[] | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProfileEmbeddingRow {
+  userId: string;
+  embedding: number[] | null;
+  embeddingModel: string | null;
+  embeddingHash: string | null;
+  embeddingGeneratedAt: string | null;
 }
 
 function rowToProfile(row: DbProfileRow): UserProfile {
@@ -23,6 +34,8 @@ function rowToProfile(row: DbProfileRow): UserProfile {
     income: (row.income_bracket ?? "Prefer not to say") as UserProfile["income"],
     household: (row.household ?? "Other") as UserProfile["household"],
     topics: (row.topics ?? []) as UserProfile["topics"],
+    freeTextContext: row.free_text_context ?? undefined,
+    additionalStates: row.additional_states ?? [],
     createdAt: row.created_at,
   };
 }
@@ -37,6 +50,29 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ? rowToProfile(data as DbProfileRow) : null;
+}
+
+export async function getProfileEmbedding(
+  userId: string,
+): Promise<ProfileEmbeddingRow | null> {
+  const sb = supabaseAdmin();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from("profiles")
+    .select(
+      "user_id, profile_embedding, profile_embedding_model, profile_embedding_hash, profile_embedding_generated_at",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return {
+    userId: data.user_id as string,
+    embedding: parseVector(data.profile_embedding),
+    embeddingModel: data.profile_embedding_model as string | null,
+    embeddingHash: data.profile_embedding_hash as string | null,
+    embeddingGeneratedAt: data.profile_embedding_generated_at as string | null,
+  };
 }
 
 export async function upsertProfile(
@@ -57,6 +93,8 @@ export async function upsertProfile(
         income_bracket: profile.income,
         household: profile.household,
         topics: profile.topics,
+        free_text_context: profile.freeTextContext ?? null,
+        additional_states: profile.additionalStates ?? [],
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -65,6 +103,28 @@ export async function upsertProfile(
     .single();
   if (error) throw new Error(error.message);
   return rowToProfile(data as DbProfileRow);
+}
+
+export async function updateProfileEmbedding(
+  userId: string,
+  input: {
+    embedding: number[];
+    embeddingModel: string;
+    embeddingHash: string;
+  },
+): Promise<void> {
+  const sb = supabaseAdmin();
+  if (!sb) throw new Error("Supabase not configured");
+  const { error } = await sb
+    .from("profiles")
+    .update({
+      profile_embedding: vectorToSql(input.embedding),
+      profile_embedding_model: input.embeddingModel,
+      profile_embedding_hash: input.embeddingHash,
+      profile_embedding_generated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteProfile(userId: string): Promise<void> {

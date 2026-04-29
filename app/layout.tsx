@@ -20,7 +20,7 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: "OpenComment — Be heard on the rules that affect you",
+  title: "OpenComment · Be heard on the rules that affect you",
   description:
     "Federal agencies write thousands of rules a year. OpenComment helps ordinary Americans find the ones that affect them and speak into the record.",
 };

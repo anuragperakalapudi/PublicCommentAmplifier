@@ -218,8 +218,11 @@ Three required tiers, the second two optional and clearly labeled:
 - State match: explicit boost only when rule text mentions user's state(s); never down-rank national rules
 
 **Phase 3:**
+- Live: multi-state profile scoring gives a positive boost when a rule mentions
+  any additional state the user selected. This never down-ranks national rules.
+- Live: thumbs up/down feedback on cards trains per-user agency/topic weights.
+  Feedback reorders and adjusts match scoring, but does not hide rules.
 - Add semantic similarity via Gemini embeddings stored in pgvector
-- Add user-feedback signal (thumbs up/down on cards trains a per-user weight)
 - Add story-match: when a user's story tags overlap with rule topics, boost
 - Final score is weighted sum, weights tunable
 

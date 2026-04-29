@@ -20,6 +20,11 @@ export default function LandingPage() {
         <nav className="hidden items-center gap-8 text-sm text-ink-600 md:flex">
           <a className="hover:text-ink" href="#how">How it works</a>
           <a className="hover:text-ink" href="#why">Why it matters</a>
+          {!signedIn && (
+            <Link href="/sign-in" className="hover:text-ink">
+              Sign in
+            </Link>
+          )}
           <Link
             href={ctaHref}
             className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-cream-50 hover:bg-ink-600"
@@ -63,7 +68,7 @@ export default function LandingPage() {
             >
               You should too. OpenComment surfaces the proposed
               rules that affect your life, and helps you put a substantive
-              comment into the official record — in your own voice, in under a
+              comment into the official record, in your own voice, in under a
               minute.
             </motion.p>
             <motion.div
@@ -129,13 +134,13 @@ export default function LandingPage() {
               icon: ShieldCheck,
               title: "Tell us, in plain English, who you are.",
               body:
-                "Two minutes. State, occupation, household — the kind of context an agency reviewer would actually weigh.",
+                "Two minutes. State, occupation, household. The kind of context an agency reviewer would actually weigh.",
             },
             {
               icon: FileText,
               title: "We pull the rules that touch your life.",
               body:
-                "Real, open comment periods from the federal docket — ranked by how directly they affect you, not by SEO.",
+                "Real, open comment periods from the federal docket, ranked by how directly they affect you, not by SEO.",
             },
             {
               icon: Megaphone,
@@ -171,7 +176,7 @@ export default function LandingPage() {
                 draft them.&rdquo;
               </p>
               <p className="mt-4 text-sm uppercase tracking-widest text-muted">
-                — Our thesis, in one sentence.
+                Our thesis, in one sentence.
               </p>
             </div>
             <div className="md:col-span-5">

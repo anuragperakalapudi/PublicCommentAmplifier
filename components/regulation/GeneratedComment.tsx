@@ -11,7 +11,7 @@ import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
 type Variant = "balanced" | "shorter" | "personal";
 const VARIANTS: { id: Variant; label: string; hint: string }[] = [
   { id: "balanced", label: "Lead with policy", hint: "Civic, substantive, anchored in your stake" },
-  { id: "shorter", label: "Lead with a question", hint: "Tighter — the question this raises for you" },
+  { id: "shorter", label: "Lead with a question", hint: "Tighter, the question this raises for you" },
   { id: "personal", label: "Lead with story", hint: "Open with a vivid moment from your life" },
 ];
 
@@ -64,7 +64,7 @@ export function GeneratedComment({
       .then(async (r) => {
         if (cancelled) return;
         if (!r.ok) {
-          // 501 (not configured) or 500 (error) — fall back to template silently.
+          // 501 (not configured) or 500 (error): fall back to template silently.
           setLlmText(null);
           setLlmFailed(r.status >= 500);
           setGenerating(false);
@@ -266,7 +266,7 @@ export function GeneratedComment({
                 onClick={() => handleMark(false)}
                 className="inline-flex items-center gap-2 rounded-full border border-rule px-4 py-2 text-xs font-medium text-ink hover:border-ink/40"
               >
-                Skip — just mark as commented
+                Skip and just mark as commented
               </button>
               <button
                 type="button"

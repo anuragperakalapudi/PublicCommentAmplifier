@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { currentUserId } from "@/lib/auth";
 import { isClerkConfigured, isSupabaseConfigured } from "@/lib/config";
+import { deleteWhyInFeedForUserSafe } from "@/lib/db/cache";
 import { deleteProfile, getProfile, upsertProfile } from "@/lib/db/profiles";
+import { refreshProfileEmbeddingSafe } from "@/lib/semantic";
 import type { UserProfile } from "@/lib/types";
 
 function notConfigured() {
@@ -32,6 +34,8 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "missing profile" }, { status: 400 });
   }
   const saved = await upsertProfile(userId, body.profile);
+  await deleteWhyInFeedForUserSafe(userId);
+  await refreshProfileEmbeddingSafe(userId);
   return NextResponse.json({ profile: saved });
 }
 
@@ -39,6 +43,7 @@ export async function DELETE() {
   if (!isClerkConfigured || !isSupabaseConfigured) return notConfigured();
   const userId = await currentUserId();
   if (!userId) return unauthorized();
+  await deleteWhyInFeedForUserSafe(userId);
   await deleteProfile(userId);
   return NextResponse.json({ ok: true });
 }

@@ -5,7 +5,8 @@ let cached: SupabaseClient | null = null;
 
 // Server-only Supabase client using the service-role key. All Phase 1 DB
 // access goes through server-side route handlers, so RLS is intentionally
-// bypassed here — we'll lock down with RLS before any client-side query.
+// bypassed here. RLS is enabled but no policies exist; we'll add policies
+// before any client-side query is made.
 //
 // Returns null when Supabase isn't configured. Callers must handle null
 // (typically by falling back to localStorage on the frontend).

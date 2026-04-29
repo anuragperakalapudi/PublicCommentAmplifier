@@ -104,5 +104,5 @@ function buildSubject(top: ScoredRegulation[]): string {
   // Truncate the lead title for the subject line
   const leadTitle =
     lead.title.length > 60 ? lead.title.slice(0, 57).trimEnd() + "…" : lead.title;
-  return `${top.length} new rules — including "${leadTitle}"`;
+  return `${top.length} new rules, including "${leadTitle}"`;
 }

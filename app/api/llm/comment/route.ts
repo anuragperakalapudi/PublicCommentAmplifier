@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
-import { isGeminiConfigured } from "@/lib/config";
+import { currentUserId } from "@/lib/auth";
+import {
+  isClerkConfigured,
+  isGeminiConfigured,
+  isSupabaseConfigured,
+} from "@/lib/config";
+import { listStories } from "@/lib/db/stories";
 import { generate } from "@/lib/llm/client";
 import { generateWithGate } from "@/lib/llm/postprocess";
 import {
   buildCommentPrompt,
   type CommentVariant,
 } from "@/lib/llm/prompts/comment";
+import { selectRelevantStories } from "@/lib/stories";
 import type { Regulation, UserProfile } from "@/lib/types";
 
 interface RequestBody {
@@ -16,6 +23,17 @@ interface RequestBody {
 
 const MODEL = "gemini-2.5-flash" as const;
 
+async function relevantStoriesFor(regulation: Regulation) {
+  if (!isClerkConfigured || !isSupabaseConfigured) return [];
+  const userId = await currentUserId();
+  if (!userId) return [];
+  try {
+    return selectRelevantStories(await listStories(userId), regulation, 2);
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(req: Request) {
   if (!isGeminiConfigured) {
     return NextResponse.json({ error: "not_configured" }, { status: 501 });
@@ -25,10 +43,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
+  const stories = await relevantStoriesFor(body.regulation);
   const { systemInstruction, prompt } = buildCommentPrompt(
     body.regulation,
     body.profile,
     body.variant,
+    stories,
   );
 
   try {

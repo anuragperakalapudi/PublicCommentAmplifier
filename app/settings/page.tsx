@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowRight, Mail, ShieldCheck, User2, Trash2, Bookmark, Activity,
+  ArrowRight, Mail, ShieldCheck, User2, Trash2, Bookmark, Activity, BookOpen,
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { FeedHeader } from "@/components/feed/FeedHeader";
@@ -21,6 +21,12 @@ const SECTIONS = [
     icon: Mail,
     title: "Email preferences",
     body: "Control digest frequency, closing-soon alerts, and topic mutes.",
+  },
+  {
+    href: "/settings/stories",
+    icon: BookOpen,
+    title: "Stories",
+    body: "Save short lived experiences that can ground comment drafts.",
   },
   {
     href: "/settings/privacy",

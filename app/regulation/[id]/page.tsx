@@ -36,6 +36,7 @@ export default function RegulationDetailPage() {
   const [keyProvisions, setKeyProvisions] = useState<string[] | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [whyText, setWhyText] = useState<string | null>(null);
+  const [whyCitations, setWhyCitations] = useState<Array<{ title: string }>>([]);
 
   useEffect(() => {
     if (hydrated && !profile) {
@@ -105,11 +106,12 @@ export default function RegulationDetailPage() {
     };
   }, [reg]);
 
-  // "Why in your feed" — personalized, not server-cached
+  // "Why in your feed": personalized, not server-cached
   useEffect(() => {
     if (!reg || !profile) return;
     let cancelled = false;
     const matchedTopics = reg.topics.filter((t) => profile.topics.includes(t));
+    setWhyCitations([]);
     fetch(`/api/llm/why`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -117,12 +119,16 @@ export default function RegulationDetailPage() {
     })
       .then(async (r) => {
         if (!r.ok) return;
-        const json = (await r.json()) as { text: string };
+        const json = (await r.json()) as {
+          text: string;
+          citations?: Array<{ title: string }>;
+        };
         if (cancelled) return;
         setWhyText(json.text);
+        setWhyCitations(json.citations ?? []);
       })
       .catch(() => {
-        // silent — fall back to static text
+        // silent: fall back to static text
       });
     return () => {
       cancelled = true;
@@ -397,6 +403,14 @@ export default function RegulationDetailPage() {
                       the proximity of the comment-period deadline.
                     </p>
                   )}
+                  {whyCitations.length > 0 && (
+                    <p className="mt-2 text-xs text-muted">
+                      Uses your story:{" "}
+                      <span className="text-ink">
+                        {whyCitations.map((c) => c.title).join(", ")}
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
@@ -419,7 +433,7 @@ export default function RegulationDetailPage() {
                   </span>{" "}
                   Click <span className="text-accent">Copy comment</span>, then{" "}
                   <span className="text-accent">Open on regulations.gov</span>{" "}
-                  ↗ — you'll land directly on the federal comment box. Paste,
+                  ↗ to land directly on the federal comment box. Paste,
                   add anything else you want to say, and submit.
                 </p>
                 <a

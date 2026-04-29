@@ -5,9 +5,14 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
-import { rankRegulations, daysUntil, matchPercent } from "@/lib/ranking";
+import {
+  deriveWeights,
+  rankRegulations,
+  daysUntil,
+  matchPercent,
+} from "@/lib/ranking";
 import type { Regulation, ScoredRegulation, Topic } from "@/lib/types";
-import { ALL_TOPICS } from "@/lib/types";
+import { ALL_TOPICS, US_STATE_NAMES } from "@/lib/types";
 import { FeedHeader } from "@/components/feed/FeedHeader";
 import {
   RegulationCard,
@@ -22,32 +27,26 @@ import {
 } from "@/components/feed/FilterRail";
 import { useSavedRegulations } from "@/hooks/useSavedRegulations";
 import { useCommentedRegulations } from "@/hooks/useCommentedRegulations";
+import { useRankingFeedback } from "@/hooks/useRankingFeedback";
 
 const PAGE_SIZE = 20;
 
-const STATE_NAMES: Record<string, string> = {
-  CA: "California", NY: "New York", TX: "Texas", FL: "Florida", OH: "Ohio",
-  MI: "Michigan", PA: "Pennsylvania", IL: "Illinois", WA: "Washington",
-  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CO: "Colorado",
-  CT: "Connecticut", DE: "Delaware", GA: "Georgia", HI: "Hawaii", ID: "Idaho",
-  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
-  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MN: "Minnesota",
-  MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska",
-  NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico",
-  NC: "North Carolina", ND: "North Dakota", OK: "Oklahoma", OR: "Oregon",
-  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota",
-  TN: "Tennessee", UT: "Utah", VT: "Vermont", VA: "Virginia",
-  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming", DC: "the District of Columbia",
-};
-
 type SearchSource = "none" | "server" | "fallback";
+
+function ruleMentionsState(text: string, stateCode: string): boolean {
+  const name = US_STATE_NAMES[stateCode];
+  const lower = text.toLowerCase();
+  return (
+    (!!name && lower.includes(name.toLowerCase())) ||
+    new RegExp(`\\b${stateCode}\\b`).test(text)
+  );
+}
 
 function applyFilters(
   regs: ScoredRegulation[],
   f: FilterState,
   topicCount: number,
-  stateName: string | undefined,
-  stateCode: string | undefined,
+  stateCodes: string[],
 ): ScoredRegulation[] {
   return regs.filter((r) => {
     if (f.agencies.length > 0 && !f.agencies.includes(r.agencyId)) return false;
@@ -62,14 +61,14 @@ function applyFilters(
       if (f.deadline === "month" && days > 30) return false;
     }
     if (f.minMatch > 0) {
-      const pct = matchPercent(r.score, topicCount);
+      const pct = matchPercent(r.baseScore, topicCount);
       if (pct < f.minMatch) return false;
     }
     if (f.stateRelevant) {
-      const text = `${r.title} ${r.summary}`.toLowerCase();
-      const hasFullName = !!stateName && text.includes(stateName.toLowerCase());
-      const hasCode = !!stateCode && text.includes(` ${stateCode.toLowerCase()} `);
-      if (!hasFullName && !hasCode) return false;
+      const text = `${r.title} ${r.summary}`;
+      if (!stateCodes.some((code) => ruleMentionsState(text, code))) {
+        return false;
+      }
     }
     return true;
   });
@@ -79,13 +78,13 @@ export default function FeedPage() {
   const router = useRouter();
   const { profile, hydrated } = useProfile();
   const [loading, setLoading] = useState(true);
-  const [baseRegulations, setBaseRegulations] = useState<ScoredRegulation[]>([]);
+  const [baseRegulations, setBaseRegulations] = useState<Regulation[]>([]);
   const [source, setSource] = useState<string>("");
   const [errored, setErrored] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ScoredRegulation[] | null>(
+  const [searchResults, setSearchResults] = useState<Regulation[] | null>(
     null,
   );
   const [searchSource, setSearchSource] = useState<SearchSource>("none");
@@ -98,6 +97,7 @@ export default function FeedPage() {
   // independently fetch + double-fire under React StrictMode.
   const { isSaved, toggle: toggleSaved } = useSavedRegulations();
   const { isCommented } = useCommentedRegulations();
+  const { feedback, set: setRankingSignal } = useRankingFeedback();
 
   // Redirect to onboarding if no profile
   useEffect(() => {
@@ -119,8 +119,7 @@ export default function FeedPage() {
           source: string;
         };
         if (cancelled) return;
-        const ranked = rankRegulations(json.regulations, profile);
-        setBaseRegulations(ranked);
+        setBaseRegulations(json.regulations);
         setSource(json.source);
         setErrored(json.source === "error");
         setLoading(false);
@@ -157,7 +156,7 @@ export default function FeedPage() {
     let cancelled = false;
     setSearching(true);
 
-    const runFallback = (): ScoredRegulation[] => {
+    const runFallback = (): Regulation[] => {
       const q = debouncedQuery.toLowerCase();
       return baseRegulations.filter(
         (r) =>
@@ -175,9 +174,8 @@ export default function FeedPage() {
           source: string;
         };
         if (cancelled) return;
-        const ranked = rankRegulations(json.regulations, profile);
-        if (ranked.length > 0 && json.source === "api") {
-          setSearchResults(ranked);
+        if (json.regulations.length > 0 && json.source === "api") {
+          setSearchResults(json.regulations);
           setSearchSource("server");
         } else {
           setSearchResults(runFallback());
@@ -197,28 +195,77 @@ export default function FeedPage() {
     };
   }, [debouncedQuery, profile, baseRegulations]);
 
-  const stateName = profile ? STATE_NAMES[profile.state] : undefined;
+  const feedbackEntries = useMemo(
+    () =>
+      Array.from(feedback.entries()).map(([documentId, signal]) => ({
+        documentId,
+        signal,
+      })),
+    [feedback],
+  );
+
+  const rulesById = useMemo(() => {
+    const map = new Map<string, Regulation>();
+    for (const reg of baseRegulations) map.set(reg.id, reg);
+    for (const reg of searchResults ?? []) map.set(reg.id, reg);
+    return map;
+  }, [baseRegulations, searchResults]);
+
+  const feedbackWeights = useMemo(
+    () => deriveWeights(feedbackEntries, rulesById),
+    [feedbackEntries, rulesById],
+  );
+
+  const rankedBaseRegulations = useMemo(
+    () =>
+      profile
+        ? rankRegulations(baseRegulations, profile, feedbackWeights)
+        : [],
+    [baseRegulations, feedbackWeights, profile],
+  );
+
+  const rankedSearchResults = useMemo(
+    () =>
+      profile && searchResults
+        ? rankRegulations(searchResults, profile, feedbackWeights)
+        : null,
+    [feedbackWeights, profile, searchResults],
+  );
+
+  const stateName = profile ? US_STATE_NAMES[profile.state] : undefined;
+  const stateCodes = useMemo(
+    () =>
+      profile
+        ? Array.from(
+            new Set([
+              profile.state,
+              ...(profile.additionalStates ?? []).filter(Boolean),
+            ]),
+          )
+        : [],
+    [profile],
+  );
   const filtersActive = isAnyFilterActive(filters);
   const topicCount = profile?.topics.length ?? 0;
 
   const displayed = useMemo(() => {
-    const pool = searchResults !== null ? searchResults : baseRegulations;
+    const pool =
+      rankedSearchResults !== null ? rankedSearchResults : rankedBaseRegulations;
     let out = pool;
     if (filtersActive) {
-      out = applyFilters(out, filters, topicCount, stateName, profile?.state);
-    } else if (searchResults === null) {
+      out = applyFilters(out, filters, topicCount, stateCodes);
+    } else if (rankedSearchResults === null) {
       // Default ranked feed: only show rules that scored against the profile.
-      out = out.filter((r) => r.score > 0);
+      out = out.filter((r) => r.baseScore > 0);
     }
     return out;
   }, [
-    searchResults,
-    baseRegulations,
+    rankedSearchResults,
+    rankedBaseRegulations,
     filters,
     filtersActive,
     topicCount,
-    stateName,
-    profile?.state,
+    stateCodes,
   ]);
 
   // Reset pagination whenever the displayed pool's identity changes
@@ -234,7 +281,8 @@ export default function FeedPage() {
   const remaining = displayed.length - visibleRegs.length;
 
   // Filter options derived from the current pool (pre-filter)
-  const filterPool = searchResults !== null ? searchResults : baseRegulations;
+  const filterPool =
+    rankedSearchResults !== null ? rankedSearchResults : rankedBaseRegulations;
   const agencyOptions = useMemo(() => {
     const counts = new Map<string, { name: string; count: number }>();
     for (const r of filterPool) {
@@ -314,11 +362,11 @@ export default function FeedPage() {
               )
             ) : filtersActive ? (
               <>
-                Filtered view — clear filters to see your personalized ranking.
+                Filtered view. Clear filters to see your personalized ranking.
               </>
             ) : (
               <>
-                Filtered from regulations.gov against your profile —{" "}
+                Filtered from regulations.gov against your profile.{" "}
                 <span className="text-ink">{profile.topics.join(", ")}</span>.
                 Ranked by direct relevance, not by what's loudest.
               </>
@@ -367,6 +415,8 @@ export default function FeedPage() {
                     saved={isSaved(reg.id)}
                     commented={isCommented(reg.id)}
                     onToggleSaved={toggleSaved}
+                    signal={feedback.get(reg.id) ?? null}
+                    onSetSignal={(signal) => setRankingSignal(reg.id, signal)}
                   />
                 ))}
                 {remaining > 0 && (
@@ -394,8 +444,8 @@ export default function FeedPage() {
               !isSearching &&
               !filtersActive && (
                 <p className="pt-6 text-center text-xs text-muted">
-                  You've reached the end of today's feed. Check back tomorrow —
-                  agencies post new rules every weekday.
+                  You've reached the end of today's feed. Check back tomorrow.
+                  Agencies post new rules every weekday.
                 </p>
               )}
           </div>

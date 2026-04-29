@@ -1,4 +1,11 @@
-import type { Regulation, ScoredRegulation, Topic, UserProfile } from "./types";
+import {
+  US_STATE_NAMES,
+  type RankingSignal,
+  type Regulation,
+  type ScoredRegulation,
+  type Topic,
+  type UserProfile,
+} from "./types";
 
 const TOPIC_KEYWORDS: Record<Topic, string[]> = {
   Healthcare: [
@@ -55,47 +62,115 @@ const TOPIC_KEYWORDS: Record<Topic, string[]> = {
   ],
 };
 
+export interface FeedbackWeights {
+  agency: Map<string, number>;
+  topic: Map<Topic, number>;
+}
+
+function capped(n: number): number {
+  return Math.max(-5, Math.min(5, n));
+}
+
+export function deriveWeights(
+  feedback: Array<{ documentId: string; signal: RankingSignal }>,
+  rulesById: Map<string, Regulation>,
+): FeedbackWeights {
+  const agency = new Map<string, number>();
+  const topic = new Map<Topic, number>();
+
+  for (const item of feedback) {
+    const reg = rulesById.get(item.documentId);
+    if (!reg) continue;
+    const delta = item.signal === "more_like" ? 1 : -1;
+    agency.set(reg.agencyId, capped((agency.get(reg.agencyId) ?? 0) + delta));
+    for (const t of reg.topics) {
+      topic.set(t, capped((topic.get(t) ?? 0) + delta));
+    }
+  }
+
+  return { agency, topic };
+}
+
+function textMentionsState(text: string, stateCode: string): boolean {
+  if (!stateCode) return false;
+  const name = US_STATE_NAMES[stateCode];
+  const lower = text.toLowerCase();
+  const hasFullName = !!name && lower.includes(name.toLowerCase());
+  const hasCode = new RegExp(`\\b${stateCode}\\b`).test(text);
+  return hasFullName || hasCode;
+}
+
+function additionalStateBoost(reg: Regulation, profile: UserProfile): number {
+  const states = (profile.additionalStates ?? []).filter(
+    (s) => s && s !== profile.state,
+  );
+  if (states.length === 0) return 0;
+  const text = `${reg.title} ${reg.summary}`;
+  return states.some((s) => textMentionsState(text, s)) ? 1 : 0;
+}
+
+function feedbackScore(reg: Regulation, weights?: FeedbackWeights): number {
+  if (!weights) return 0;
+  const agencyWeight = weights.agency.get(reg.agencyId) ?? 0;
+  const topicWeight = reg.topics.reduce(
+    (sum, t) => sum + (weights.topic.get(t) ?? 0),
+    0,
+  );
+  return agencyWeight + topicWeight;
+}
+
+function semanticPoints(cosine: number | undefined): number {
+  if (cosine === undefined || !Number.isFinite(cosine)) return 0;
+  return Math.max(0, Math.min(6, ((cosine - 0.72) / 0.18) * 6));
+}
+
 export function scoreRegulation(
   reg: Regulation,
   profile: UserProfile,
+  weights?: FeedbackWeights,
 ): ScoredRegulation {
   const text = `${reg.title} ${reg.summary} ${reg.documentType}`.toLowerCase();
   const matchedTopics: Topic[] = [];
-  let score = 0;
+  let baseScore = 0;
 
   for (const topic of profile.topics) {
     const keywords = TOPIC_KEYWORDS[topic] ?? [];
     const hits = keywords.filter((k) => text.includes(k)).length;
     if (hits > 0) {
       matchedTopics.push(topic);
-      score += Math.min(hits, 4);
+      baseScore += Math.min(hits, 4);
     }
     if (reg.topics.includes(topic)) {
-      score += 4;
+      baseScore += 4;
       if (!matchedTopics.includes(topic)) matchedTopics.push(topic);
     }
   }
 
-  // Recency bump — newer regs nudged up
+  // Recency bump: newer regs nudged up
   const days =
     (Date.now() - new Date(reg.postedDate).getTime()) / (1000 * 60 * 60 * 24);
-  if (days < 7) score += 1;
+  if (days < 7) baseScore += 1;
 
-  // Urgency bump — closing soon
+  // Urgency bump: closing soon
   const daysToClose =
     (new Date(reg.commentEndDate).getTime() - Date.now()) /
     (1000 * 60 * 60 * 24);
-  if (daysToClose < 14 && daysToClose > 0) score += 1;
+  if (daysToClose < 14 && daysToClose > 0) baseScore += 1;
 
-  return { ...reg, score, matchedTopics };
+  baseScore += additionalStateBoost(reg, profile);
+  baseScore += semanticPoints(reg.semanticScore);
+  const score = baseScore + feedbackScore(reg, weights);
+
+  return { ...reg, baseScore, score, matchedTopics };
 }
 
 export function rankRegulations(
   regs: Regulation[],
   profile: UserProfile,
+  weights?: FeedbackWeights,
 ): ScoredRegulation[] {
   return regs
-    .map((r) => scoreRegulation(r, profile))
+    .map((r) => scoreRegulation(r, profile, weights))
     .sort((a, b) => b.score - a.score);
 }
 

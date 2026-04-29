@@ -81,6 +81,60 @@ export const US_STATES = [
   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC",
 ];
 
+export const US_STATE_NAMES: Record<string, string> = {
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
+  DC: "the District of Columbia",
+};
+
 export interface UserProfile {
   displayName?: string;
   ageRange: AgeRange;
@@ -89,8 +143,26 @@ export interface UserProfile {
   income: IncomeBracket;
   household: HouseholdStatus;
   topics: Topic[];
+  freeTextContext?: string;
+  additionalStates?: string[];
   createdAt: string;
 }
+
+export const FREE_TEXT_CONTEXT_LIMIT = 500;
+
+export const MAX_STORIES = 5;
+
+export interface Story {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  tags: Topic[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RankingSignal = "more_like" | "less_like";
 
 export interface Regulation {
   id: string;
@@ -105,11 +177,13 @@ export interface Regulation {
   topics: Topic[];
   excerpt?: string;
   provisions?: string[];
+  semanticScore?: number;
   regulationsGovUrl: string;
   source: "api" | "mock";
 }
 
 export interface ScoredRegulation extends Regulation {
+  baseScore: number;
   score: number;
   matchedTopics: Topic[];
 }

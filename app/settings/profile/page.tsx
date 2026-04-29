@@ -9,6 +9,7 @@ import { Field, TextInput, ChoiceGrid } from "@/components/onboarding/Field";
 import { TopicChips } from "@/components/onboarding/TopicChips";
 import {
   AGE_RANGES, INCOME_BRACKETS, HOUSEHOLD_STATUSES, US_STATES,
+  FREE_TEXT_CONTEXT_LIMIT,
   type AgeRange, type IncomeBracket, type HouseholdStatus, type Topic,
   type UserProfile,
 } from "@/lib/types";
@@ -25,6 +26,8 @@ export default function SettingsProfilePage() {
   const [income, setIncome] = useState<IncomeBracket | null>(null);
   const [household, setHousehold] = useState<HouseholdStatus | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [freeTextContext, setFreeTextContext] = useState("");
+  const [additionalStates, setAdditionalStates] = useState<string[]>([]);
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
@@ -37,6 +40,8 @@ export default function SettingsProfilePage() {
       setIncome(profile.income);
       setHousehold(profile.household);
       setTopics(profile.topics);
+      setFreeTextContext(profile.freeTextContext ?? "");
+      setAdditionalStates(profile.additionalStates ?? []);
     }
   }, [profile, hydrated, router]);
 
@@ -48,9 +53,15 @@ export default function SettingsProfilePage() {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
     );
 
+  const toggleState = (s: string) =>
+    setAdditionalStates((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
+
   const handleSave = async () => {
     if (!canSave || !ageRange || !state || !income || !household) return;
     const trimmedName = displayName.trim();
+    const trimmedContext = freeTextContext.trim();
     const next: UserProfile = {
       displayName: trimmedName || undefined,
       ageRange,
@@ -59,6 +70,8 @@ export default function SettingsProfilePage() {
       income,
       household,
       topics,
+      freeTextContext: trimmedContext || undefined,
+      additionalStates: additionalStates.filter((s) => s !== state),
       createdAt: profile?.createdAt ?? new Date().toISOString(),
     };
     await setProfile(next);
@@ -94,7 +107,7 @@ export default function SettingsProfilePage() {
         <div className="mt-10 space-y-7">
           <Field
             label="What should we call you?"
-            hint="First name only is fine. Optional — used for your avatar."
+            hint="First name only is fine. Optional. Used for your avatar."
           >
             <TextInput
               value={displayName}
@@ -155,6 +168,64 @@ export default function SettingsProfilePage() {
 
           <Field label="Topics">
             <TopicChips selected={topics} onToggle={toggleTopic} />
+          </Field>
+
+          <div className="border-t border-rule pt-7">
+            <h2 className="font-display text-2xl text-ink">
+              More context
+            </h2>
+            <p className="mt-2 text-sm text-ink-600">
+              Optional details used only for ranking and drafting. Leave blank
+              if nothing else should shape your feed.
+            </p>
+          </div>
+
+          <Field
+            label="Other context"
+            hint="Caregiving, health, job, family, or other lived context that should shape matching."
+          >
+            <textarea
+              value={freeTextContext}
+              onChange={(e) =>
+                setFreeTextContext(
+                  e.target.value.slice(0, FREE_TEXT_CONTEXT_LIMIT),
+                )
+              }
+              maxLength={FREE_TEXT_CONTEXT_LIMIT}
+              rows={5}
+              placeholder="I care for my mother, who relies on home health services..."
+              className="w-full rounded-md border border-rule bg-paper px-4 py-3 text-sm leading-relaxed text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+            />
+            <p className="mt-2 text-right font-mono text-xs text-muted">
+              {freeTextContext.length}/{FREE_TEXT_CONTEXT_LIMIT}
+            </p>
+          </Field>
+
+          <Field
+            label="Other states you care about"
+            hint="Family in, work in, or regularly affected by rules in another state."
+          >
+            <div className="flex flex-wrap gap-2">
+              {US_STATES.map((s) => {
+                const active = additionalStates.includes(s);
+                const primary = s === state;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={primary}
+                    onClick={() => toggleState(s)}
+                    className={`inline-flex min-w-11 justify-center rounded-full border px-3 py-2 font-mono text-xs transition ${
+                      active
+                        ? "border-ink bg-ink text-cream-50 shadow-card"
+                        : "border-rule bg-paper text-ink hover:border-ink/40"
+                    } ${primary ? "cursor-not-allowed opacity-35" : ""}`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
         </div>
 

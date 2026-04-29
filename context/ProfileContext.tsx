@@ -46,7 +46,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
                 saveProfile(json.profile);
               } else {
                 // 200 + null means we're authed (else we'd have 401) but
-                // have no DB row yet — i.e., a brand-new account. Any
+                // have no DB row yet, i.e., a brand-new account. Any
                 // localStorage profile from prior testing is stale; wipe
                 // it so /feed routes the user to /onboarding.
                 setProfileState(null);

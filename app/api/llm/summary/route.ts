@@ -84,7 +84,7 @@ export async function POST(req: Request) {
           modelVersion: MODEL,
         });
       } catch {
-        // non-fatal — return uncached
+        // non-fatal: return uncached
       }
     }
 

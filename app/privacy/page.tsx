@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 
 export const metadata = {
-  title: "Privacy — OpenComment",
+  title: "Privacy · OpenComment",
   description:
     "What OpenComment collects, how we use it, and what we never do with your data.",
 };
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
           Privacy
         </p>
         <h1 className="headline mt-2 text-4xl md:text-5xl">
-          What we do — and don&rsquo;t do — with your data.
+          What we do, and what we don&rsquo;t, with your data.
         </h1>
         <p className="mt-3 text-sm text-muted">Last updated {LAST_UPDATED}</p>
 
@@ -44,8 +44,8 @@ export default function PrivacyPage() {
           <h2 className="font-display text-2xl text-ink">In one paragraph</h2>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
             OpenComment exists to help ordinary people participate in federal
-            rulemaking. To do that we ask you for context about your life — your
-            occupation, state, household. We use that context to rank what
+            rulemaking. To do that we ask you for context about your life:
+            your occupation, state, household. We use that context to rank what
             you see and to draft comments anchored to your real situation.
             We don&rsquo;t sell that data, we don&rsquo;t share it, and we
             don&rsquo;t train models on it. You can delete every byte of it
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
               <span>
                 <strong className="text-ink">We don&rsquo;t train models on you.</strong>{" "}
                 Your profile, your stories, and the comments we draft for you
-                are not used to train any model — ours or anyone else&rsquo;s.
+                are not used to train any model, ours or anyone else&rsquo;s.
                 Our LLM provider has the same commitment in their data policy.
               </span>
             </li>
@@ -105,7 +105,7 @@ export default function PrivacyPage() {
         <section className="mt-12">
           <h2 className="font-display text-2xl text-ink">What we do collect</h2>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
-            The data you give us during onboarding — age range, occupation,
+            The data you give us during onboarding: age range, occupation,
             state of residence, income bracket, household status, topics of
             interest. Optionally: a short free-text description of your
             situation, and short personal stories you choose to share. We also
@@ -146,7 +146,7 @@ export default function PrivacyPage() {
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
               <span>
                 <strong className="text-ink">Sending email you&rsquo;ve asked for.</strong>{" "}
-                Weekly digests, closing-soon reminders, and final-rule notices —
+                Weekly digests, closing-soon reminders, and final-rule notices,
                 only at the cadence you&rsquo;ve set in your email preferences.
                 You can opt out of any one of those, or all of them.
               </span>
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
               <span>
-                Turn off any email channel — or all of them — at any time. Every
+                Turn off any email channel, or all of them, at any time. Every
                 email we send also has a one-click unsubscribe link.
               </span>
             </li>

@@ -11,7 +11,7 @@ export function appLink(path: string): string {
   return `${APP_URL}${path.startsWith("/") ? path : "/" + path}`;
 }
 
-// Wraps body HTML in our standard email shell — header + footer with
+// Wraps body HTML in our standard email shell: header + footer with
 // privacy / unsubscribe / app link.
 export function shellHtml(opts: {
   preheader: string;

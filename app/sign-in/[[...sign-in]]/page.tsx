@@ -43,6 +43,10 @@ function ClerkSignIn() {
   const { SignIn } = require("@clerk/nextjs");
   return (
     <SignIn
+      // Returning users go to the feed. /feed will redirect to /onboarding
+      // if their DB profile doesn't exist yet.
+      fallbackRedirectUrl="/feed"
+      signUpFallbackRedirectUrl="/onboarding"
       appearance={{
         elements: {
           rootBox: "w-full",

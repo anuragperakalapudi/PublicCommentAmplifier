@@ -42,6 +42,11 @@ function ClerkSignUp() {
   const { SignUp } = require("@clerk/nextjs");
   return (
     <SignUp
+      // After sign-up, send brand-new accounts straight to onboarding.
+      // /feed would short-circuit there anyway when no DB profile exists,
+      // but routing direct avoids a flash of the feed shell.
+      fallbackRedirectUrl="/onboarding"
+      signInFallbackRedirectUrl="/feed"
       appearance={{
         elements: {
           rootBox: "w-full",

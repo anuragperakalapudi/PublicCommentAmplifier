@@ -6,7 +6,6 @@ import {
 } from "@/lib/config";
 import {
   isAuthorizedCron,
-  currentHourIn,
   currentDayOfWeekIn,
   isWithinQuietHours,
 } from "@/lib/cron-auth";
@@ -61,7 +60,6 @@ export async function GET(req: Request) {
 
   const skipped: Record<string, number> = {
     off: 0,
-    wrong_hour: 0,
     weekly_wrong_day: 0,
     quiet_hours: 0,
     no_email: 0,
@@ -80,12 +78,11 @@ export async function GET(req: Request) {
       continue;
     }
     const tz = prefs?.timezone ?? "America/New_York";
-    const desiredHour = (prefs?.digestTime ?? "09:00").slice(0, 2);
-    const currentHour = currentHourIn(tz);
-    if (currentHour !== desiredHour) {
-      skipped.wrong_hour++;
-      continue;
-    }
+    // Note: digest_time preference is intentionally NOT enforced here —
+    // Vercel Hobby caps cron at once per day, so we run at a single fixed
+    // UTC hour and fan out to every eligible user. To honor digest_time
+    // per user, switch to an hourly cron (Vercel Pro or an external
+    // scheduler hitting this endpoint with the CRON_SECRET).
     if (freq === "weekly" && currentDayOfWeekIn(tz) !== WEEKLY_DELIVERY_DAY) {
       skipped.weekly_wrong_day++;
       continue;

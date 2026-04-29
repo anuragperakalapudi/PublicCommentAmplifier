@@ -66,7 +66,7 @@ export async function PATCH(
   const story = await updateStory(userId, params.id, patch);
   if (!story) return NextResponse.json({ error: "not_found" }, { status: 404 });
   await deleteWhyInFeedForUserSafe(userId);
-  await refreshProfileEmbeddingSafe(userId);
+  void refreshProfileEmbeddingSafe(userId);
   return NextResponse.json({ story });
 }
 
@@ -79,6 +79,6 @@ export async function DELETE(
   if (!userId) return unauthorized();
   await deleteStory(userId, params.id);
   await deleteWhyInFeedForUserSafe(userId);
-  await refreshProfileEmbeddingSafe(userId);
+  void refreshProfileEmbeddingSafe(userId);
   return NextResponse.json({ ok: true });
 }

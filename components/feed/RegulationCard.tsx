@@ -34,7 +34,7 @@ export function RegulationCard({
   signal?: RankingSignal | null;
   onSetSignal?: (signal: RankingSignal | null) => void;
 }) {
-  const pct = matchPercent(reg.score, topicCount);
+  const pct = matchPercent(reg.baseScore, topicCount);
   const deadline = formatDeadline(reg.commentEndDate);
   const closingSoon =
     deadline.includes("today") ||

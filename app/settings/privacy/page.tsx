@@ -18,6 +18,8 @@ export default function SettingsPrivacyPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [clearingFeedback, setClearingFeedback] = useState(false);
+  const [feedbackCleared, setFeedbackCleared] = useState(false);
 
   if (hydrated && !profile) {
     router.replace("/onboarding");
@@ -79,6 +81,24 @@ export default function SettingsPrivacyPage() {
       router.replace("/");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleClearFeedback = async () => {
+    setClearingFeedback(true);
+    try {
+      if (isClerkConfigured) {
+        try {
+          await fetch("/api/ranking-feedback", { method: "DELETE" });
+        } catch {
+          // Local cleanup still gives the user an immediate reset.
+        }
+      }
+      window.localStorage.removeItem("pca:ranking-feedback:v1");
+      setFeedbackCleared(true);
+      setTimeout(() => setFeedbackCleared(false), 2200);
+    } finally {
+      setClearingFeedback(false);
     }
   };
 
@@ -168,7 +188,28 @@ export default function SettingsPrivacyPage() {
             className="mt-4 inline-flex items-center gap-2 rounded-full border border-rule px-4 py-2 text-sm text-ink hover:border-ink/40 disabled:opacity-50"
           >
             <Download className="h-3.5 w-3.5" />
-            {exporting ? "Exporting…" : "Download my data"}
+            {exporting ? "Exporting..." : "Download my data"}
+          </button>
+        </section>
+
+        <section className="mt-6 rounded-xl border border-rule bg-paper p-5">
+          <h2 className="font-display text-xl text-ink">Ranking feedback</h2>
+          <p className="mt-2 text-sm text-ink-600">
+            Clear the thumbs up/down signals that reorder your feed. This does
+            not delete your profile, stories, saved rules, or comments.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearFeedback}
+            disabled={clearingFeedback}
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-rule px-4 py-2 text-sm text-ink hover:border-ink/40 disabled:opacity-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {clearingFeedback
+              ? "Clearing..."
+              : feedbackCleared
+                ? "Feedback cleared"
+                : "Clear thumbs feedback"}
           </button>
         </section>
 
@@ -205,7 +246,7 @@ export default function SettingsPrivacyPage() {
                   className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-cream-50 hover:bg-accent-700 disabled:opacity-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  {deleting ? "Deleting…" : "Yes, delete everything"}
+                  {deleting ? "Deleting..." : "Yes, delete everything"}
                 </button>
                 <button
                   type="button"

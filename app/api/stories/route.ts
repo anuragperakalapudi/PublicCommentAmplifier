@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       tags: parseTags(body.tags),
     });
     await deleteWhyInFeedForUserSafe(userId);
-    await refreshProfileEmbeddingSafe(userId);
+    void refreshProfileEmbeddingSafe(userId);
     return NextResponse.json({ story }, { status: 201 });
   } catch (err) {
     return NextResponse.json(

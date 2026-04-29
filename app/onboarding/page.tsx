@@ -34,6 +34,8 @@ export default function OnboardingPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [freeTextContext, setFreeTextContext] = useState("");
   const [additionalStates, setAdditionalStates] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // pre-fill from existing profile (allows editing later)
   useEffect(() => {
@@ -66,10 +68,10 @@ export default function OnboardingPage() {
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
     );
 
-  const finish = (skipOptionalContext = false) => {
-    if (!ageRange || !state || !income || !household) return;
+  const finish = async () => {
+    if (!ageRange || !state || !income || !household || saving) return;
     const trimmedName = displayName.trim();
-    const trimmedContext = skipOptionalContext ? "" : freeTextContext.trim();
+    const trimmedContext = freeTextContext.trim();
     const next: UserProfile = {
       displayName: trimmedName || undefined,
       ageRange,
@@ -79,13 +81,23 @@ export default function OnboardingPage() {
       household,
       topics,
       freeTextContext: trimmedContext || undefined,
-      additionalStates: skipOptionalContext
-        ? []
-        : additionalStates.filter((s) => s !== state),
+      additionalStates: additionalStates.filter((s) => s !== state),
       createdAt: profile?.createdAt ?? new Date().toISOString(),
     };
-    setProfile(next);
-    router.push("/feed");
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await setProfile(next);
+      router.push("/feed");
+    } catch (err) {
+      setSaveError(
+        err instanceof Error
+          ? err.message
+          : "We could not save your profile. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -112,6 +124,12 @@ export default function OnboardingPage() {
           </p>
         </aside>
 
+        {saveError && (
+          <p className="mt-4 rounded-lg border border-accent/30 bg-accent-50 p-3 text-sm text-accent">
+            {saveError}
+          </p>
+        )}
+
         <div className="mt-12 min-h-[440px]">
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 && (
@@ -128,7 +146,7 @@ export default function OnboardingPage() {
                 <p className="mt-3 text-base text-ink-600">
                   Federal reviewers weigh comments more carefully when they
                   reflect a real person and a specific place. None of this
-                  leaves your device.
+                  is used for anything beyond your feed and drafts.
                 </p>
 
                 <div className="mt-10 space-y-7">
@@ -345,19 +363,20 @@ export default function OnboardingPage() {
             <div className="flex flex-wrap items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => finish(true)}
-                className="rounded-full border border-rule px-5 py-3 text-sm font-medium text-ink-600 transition hover:border-ink/40 hover:text-ink"
+                onClick={finish}
+                disabled={saving}
+                className="rounded-full border border-rule px-5 py-3 text-sm font-medium text-ink-600 transition hover:border-ink/40 hover:text-ink disabled:opacity-50"
               >
                 Skip
               </button>
               <button
                 type="button"
-                disabled={!canAdvance}
-                onClick={() => finish(false)}
+                disabled={!canAdvance || saving}
+                onClick={finish}
                 className="group inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-cream-50 shadow-card transition hover:bg-accent-700 disabled:bg-accent/40 disabled:shadow-none"
               >
                 <Check className="h-4 w-4" />
-                Build my feed
+                {saving ? "Saving..." : "Build my feed"}
               </button>
             </div>
           )}

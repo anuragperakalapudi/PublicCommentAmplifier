@@ -33,9 +33,20 @@ export async function PATCH(req: Request) {
   if (!body?.profile) {
     return NextResponse.json({ error: "missing profile" }, { status: 400 });
   }
-  const saved = await upsertProfile(userId, body.profile);
+  let saved: UserProfile;
+  try {
+    saved = await upsertProfile(userId, body.profile);
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: "profile_save_failed",
+        message: err instanceof Error ? err.message : "Could not save profile.",
+      },
+      { status: 500 },
+    );
+  }
   await deleteWhyInFeedForUserSafe(userId);
-  await refreshProfileEmbeddingSafe(userId);
+  void refreshProfileEmbeddingSafe(userId);
   return NextResponse.json({ profile: saved });
 }
 

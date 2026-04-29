@@ -67,10 +67,6 @@ export interface FeedbackWeights {
   topic: Map<Topic, number>;
 }
 
-function capped(n: number): number {
-  return Math.max(-5, Math.min(5, n));
-}
-
 export function deriveWeights(
   feedback: Array<{ documentId: string; signal: RankingSignal }>,
   rulesById: Map<string, Regulation>,
@@ -82,9 +78,9 @@ export function deriveWeights(
     const reg = rulesById.get(item.documentId);
     if (!reg) continue;
     const delta = item.signal === "more_like" ? 1 : -1;
-    agency.set(reg.agencyId, capped((agency.get(reg.agencyId) ?? 0) + delta));
+    agency.set(reg.agencyId, (agency.get(reg.agencyId) ?? 0) + delta);
     for (const t of reg.topics) {
-      topic.set(t, capped((topic.get(t) ?? 0) + delta));
+      topic.set(t, (topic.get(t) ?? 0) + delta);
     }
   }
 

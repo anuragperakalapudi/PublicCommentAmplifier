@@ -58,6 +58,30 @@ function saveLocalStories(stories: Story[]): void {
   window.localStorage.setItem(LS_KEY, JSON.stringify(stories));
 }
 
+async function storyErrorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  try {
+    const json = (await response.json()) as {
+      error?: string;
+      message?: string;
+    };
+    if (json.error === "story_limit_reached") {
+      return "You can save up to five stories. Delete one before adding another.";
+    }
+    if (json.error === "title_and_body_required") {
+      return "Add both a title and story body before saving.";
+    }
+    if (json.error === "not_configured") {
+      return "Story sync is not configured. Changes will stay on this device for now.";
+    }
+    return json.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function StoryEditor({
   framed = true,
   initial,
@@ -243,7 +267,7 @@ export default function SettingsStoriesPage() {
       body: JSON.stringify(input),
     });
     if (!r.ok) {
-      setError("Could not save this story.");
+      setError(await storyErrorMessage(r, "Could not save this story."));
       return;
     }
     const json = (await r.json()) as { story: Story };
@@ -276,7 +300,7 @@ export default function SettingsStoriesPage() {
       body: JSON.stringify(input),
     });
     if (!r.ok) {
-      setError("Could not update this story.");
+      setError(await storyErrorMessage(r, "Could not update this story."));
       return;
     }
     const json = (await r.json()) as { story: Story };
@@ -301,7 +325,7 @@ export default function SettingsStoriesPage() {
       method: "DELETE",
     });
     if (!r.ok) {
-      setError("Could not delete this story.");
+      setError(await storyErrorMessage(r, "Could not delete this story."));
       return;
     }
     const next = stories.filter((story) => story.id !== id);

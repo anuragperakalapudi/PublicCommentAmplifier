@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RankingSignal } from "@/lib/types";
 
 const LS_KEY = "pca:ranking-feedback:v1";
@@ -31,6 +31,7 @@ interface UseRankingFeedback {
 
 export function useRankingFeedback(): UseRankingFeedback {
   const [entries, setEntries] = useState<Record<string, RankingSignal>>({});
+  const entriesRef = useRef<Record<string, RankingSignal>>({});
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export function useRankingFeedback(): UseRankingFeedback {
               feedback: Record<string, RankingSignal>;
             };
             if (!cancelled) {
+              entriesRef.current = json.feedback;
               setEntries(json.feedback);
               lsSave(json.feedback);
               setHydrated(true);
@@ -55,7 +57,9 @@ export function useRankingFeedback(): UseRankingFeedback {
         }
       }
       if (cancelled) return;
-      setEntries(lsLoad());
+      const local = lsLoad();
+      entriesRef.current = local;
+      setEntries(local);
       setHydrated(true);
     };
     load();
@@ -66,25 +70,29 @@ export function useRankingFeedback(): UseRankingFeedback {
 
   const set = useCallback(
     async (documentId: string, signal: RankingSignal | null) => {
-      const next = { ...entries };
+      const rollback = entriesRef.current;
+      const next = { ...rollback };
       if (signal) next[documentId] = signal;
       else delete next[documentId];
+      entriesRef.current = next;
       setEntries(next);
       lsSave(next);
 
       if (!isClerkConfigured) return;
       try {
-        await fetch("/api/ranking-feedback", {
+        const response = await fetch("/api/ranking-feedback", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ documentId, signal }),
         });
+        if (!response.ok) throw new Error("Feedback save failed");
       } catch {
-        setEntries(entries);
-        lsSave(entries);
+        entriesRef.current = rollback;
+        setEntries(rollback);
+        lsSave(rollback);
       }
     },
-    [entries],
+    [],
   );
 
   return {

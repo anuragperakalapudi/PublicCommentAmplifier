@@ -14,7 +14,7 @@ import { loadProfile, saveProfile, clearProfile } from "@/lib/profile";
 interface ProfileContextValue {
   profile: UserProfile | null;
   hydrated: boolean;
-  setProfile: (p: UserProfile) => Promise<void> | void;
+  setProfile: (p: UserProfile) => Promise<UserProfile>;
   reset: () => Promise<void> | void;
 }
 
@@ -22,6 +22,21 @@ const ProfileContext = createContext<ProfileContextValue | undefined>(undefined)
 
 const isClerkConfigured =
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+async function profileSaveError(response: Response): Promise<Error> {
+  const fallback = `Profile save failed (${response.status})`;
+  const text = await response
+    .clone()
+    .text()
+    .catch(() => "");
+  if (!text) return new Error(fallback);
+  try {
+    const json = JSON.parse(text) as { error?: string; message?: string };
+    return new Error(json.message || json.error || fallback);
+  } catch {
+    return new Error(text.slice(0, 180));
+  }
+}
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile | null>(null);
@@ -71,18 +86,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setProfile = useCallback(async (p: UserProfile) => {
-    saveProfile(p);
-    setProfileState(p);
-    if (!isClerkConfigured) return;
-    try {
-      await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile: p }),
-      });
-    } catch {
-      // localStorage already updated; the next load will retry.
+    if (!isClerkConfigured) {
+      saveProfile(p);
+      setProfileState(p);
+      return p;
     }
+
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile: p }),
+    });
+    if (!response.ok) throw await profileSaveError(response);
+
+    const json = (await response.json()) as { profile?: UserProfile };
+    if (!json.profile) throw new Error("Profile save failed.");
+    saveProfile(json.profile);
+    setProfileState(json.profile);
+    return json.profile;
   }, []);
 
   const reset = useCallback(async () => {

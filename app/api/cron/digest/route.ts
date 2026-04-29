@@ -114,7 +114,7 @@ export async function GET(req: Request) {
       allRegs,
     );
     const ranked = rankRegulations(semanticRegs, profile)
-      .filter((r) => r.score > 0)
+      .filter((r) => r.baseScore > 0)
       .filter((r) => !commented.has(r.id))
       .filter((r) => r.topics.every((t) => !muted.has(t)) || r.topics.length === 0);
 

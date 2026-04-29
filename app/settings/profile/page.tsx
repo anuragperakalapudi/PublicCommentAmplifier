@@ -29,6 +29,8 @@ export default function SettingsProfilePage() {
   const [freeTextContext, setFreeTextContext] = useState("");
   const [additionalStates, setAdditionalStates] = useState<string[]>([]);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (hydrated && !profile) router.replace("/onboarding");
@@ -59,7 +61,7 @@ export default function SettingsProfilePage() {
     );
 
   const handleSave = async () => {
-    if (!canSave || !ageRange || !state || !income || !household) return;
+    if (!canSave || !ageRange || !state || !income || !household || saving) return;
     const trimmedName = displayName.trim();
     const trimmedContext = freeTextContext.trim();
     const next: UserProfile = {
@@ -74,9 +76,22 @@ export default function SettingsProfilePage() {
       additionalStates: additionalStates.filter((s) => s !== state),
       createdAt: profile?.createdAt ?? new Date().toISOString(),
     };
-    await setProfile(next);
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 2200);
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await setProfile(next);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2200);
+    } catch (err) {
+      setSavedFlash(false);
+      setSaveError(
+        err instanceof Error
+          ? err.message
+          : "We could not save your profile. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!hydrated || !profile) {
@@ -103,6 +118,12 @@ export default function SettingsProfilePage() {
         <p className="mt-3 text-base text-ink-600">
           Used only to rank your feed and draft your comments. Update any time.
         </p>
+
+        {saveError && (
+          <p className="mt-4 rounded-lg border border-accent/30 bg-accent-50 p-3 text-sm text-accent">
+            {saveError}
+          </p>
+        )}
 
         <div className="mt-10 space-y-7">
           <Field
@@ -241,11 +262,11 @@ export default function SettingsProfilePage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!canSave}
+            disabled={!canSave || saving}
             className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-cream-50 shadow-card transition hover:bg-accent-700 disabled:bg-accent/40 disabled:shadow-none"
           >
             <Check className="h-4 w-4" />
-            {savedFlash ? "Saved ✓" : "Save changes"}
+            {saving ? "Saving..." : savedFlash ? "Saved" : "Save changes"}
           </button>
         </div>
       </section>

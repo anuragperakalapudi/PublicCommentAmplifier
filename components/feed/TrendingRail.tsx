@@ -50,15 +50,15 @@ export function TrendingRail({
       <p className="dotted-divider my-4" />
 
       <p className="text-[11px] leading-relaxed text-muted">
-        Source: regulations.gov v4 ·{" "}
+        Federal docket data:{" "}
         <span className="text-ink-600">
           {source === "api"
             ? "live"
             : source === "error"
               ? "unavailable"
-              : "n/a"}
-        </span>{" "}
-        · cached 5 min
+              : "not loaded"}
+        </span>
+        . Cached for 5 min.
       </p>
     </section>
   );

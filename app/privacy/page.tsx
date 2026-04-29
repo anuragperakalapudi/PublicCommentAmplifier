@@ -7,7 +7,7 @@ export const metadata = {
     "What OpenComment collects, how we use it, and what we never do with your data.",
 };
 
-const LAST_UPDATED = "April 25, 2026";
+const LAST_UPDATED = "April 29, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -45,11 +45,12 @@ export default function PrivacyPage() {
           <p className="mt-3 text-base leading-relaxed text-ink-600">
             OpenComment exists to help ordinary people participate in federal
             rulemaking. To do that we ask you for context about your life:
-            your occupation, state, household. We use that context to rank what
-            you see and to draft comments anchored to your real situation.
-            We don&rsquo;t sell that data, we don&rsquo;t share it, and we
-            don&rsquo;t train models on it. You can delete every byte of it
-            with one click.
+            your occupation, state, household, topics, optional stories, and
+            optional context you choose to add. We use that context to rank
+            what you see, explain why a rule matched, and draft comments
+            anchored to your real situation. We don&rsquo;t sell that data, we
+            don&rsquo;t share it, and we don&rsquo;t train models on it. You can
+            delete every byte of it with one click.
           </p>
         </section>
 
@@ -79,7 +80,7 @@ export default function PrivacyPage() {
                 <strong className="text-ink">We don&rsquo;t train models on you.</strong>{" "}
                 Your profile, your stories, and the comments we draft for you
                 are not used to train any model, ours or anyone else&rsquo;s.
-                Our LLM provider has the same commitment in their data policy.
+                Our AI provider has the same commitment in their data policy.
               </span>
             </li>
             <li className="flex gap-3">
@@ -106,11 +107,12 @@ export default function PrivacyPage() {
           <h2 className="font-display text-2xl text-ink">What we do collect</h2>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
             The data you give us during onboarding: age range, occupation,
-            state of residence, income bracket, household status, topics of
-            interest. Optionally: a short free-text description of your
-            situation, and short personal stories you choose to share. We also
-            keep an account-level record of the rules you save and the rules
-            you mark as commented on.
+            state of residence, additional states you care about, income
+            bracket, household status, topics of interest, and optional
+            free-text context. Optionally: short personal stories you choose
+            to share. We also keep an account-level record of the rules you
+            save, the rules you mark as commented on, and thumbs up/down
+            feedback you give to improve ranking.
           </p>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
             We do not collect: your real name (unless you put it in a story),
@@ -128,18 +130,22 @@ export default function PrivacyPage() {
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
               <span>
                 <strong className="text-ink">Ranking your feed.</strong> We use
-                your topics, occupation, and state to score open federal rules
-                against your situation.
+                your topics, occupation, state, optional context, stories, and
+                feedback to score open federal rules against your situation.
+                We also store derived matching signals, such as embeddings, so
+                free-text stories can improve matches without reprocessing all
+                of your text on every visit.
               </span>
             </li>
             <li className="flex gap-3">
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
               <span>
-                <strong className="text-ink">Drafting your comments.</strong>{" "}
+                <strong className="text-ink">Drafting your comments and explanations.</strong>{" "}
                 When you open a rule, we send the rule&rsquo;s text and your
-                profile to Google&rsquo;s Gemini API to draft a comment in your
-                voice. Google&rsquo;s commercial terms prohibit them from
-                training on or retaining that content.
+                profile context to Google&rsquo;s Gemini API to draft a comment
+                in your voice or explain why a rule matched you. Google&rsquo;s
+                commercial terms prohibit them from training on or retaining
+                that content.
               </span>
             </li>
             <li className="flex gap-3">
@@ -158,10 +164,12 @@ export default function PrivacyPage() {
           <h2 className="font-display text-2xl text-ink">Where it lives</h2>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
             Your data is stored in a Postgres database hosted by Supabase in
-            the United States. It is encrypted at rest and in transit. API
-            keys for any third-party service we use (LLM provider, email
-            sender, federal docket) are stored server-side only and never
-            exposed to your browser.
+            the United States. It is encrypted at rest and in transit. We also
+            store generated summaries, personalized match explanations, and
+            derived matching signals used to rank your feed. API keys for any
+            third-party service we use (AI provider, email sender, federal
+            docket) are stored server-side only and never exposed to your
+            browser.
           </p>
         </section>
 
@@ -194,7 +202,8 @@ export default function PrivacyPage() {
           <p className="mt-4 text-base leading-relaxed text-ink-600">
             Account deletion is a single click plus one confirmation. It runs
             within 24 hours and removes your profile, saved rules, commented
-            history, stories, and email preferences from our database, plus
+            history, stories, ranking feedback, cached explanations, derived
+            matching signals, and email preferences from our database, plus
             your account from our auth provider.
           </p>
         </section>

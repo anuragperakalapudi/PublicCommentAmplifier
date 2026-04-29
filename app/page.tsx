@@ -37,15 +37,6 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-6 pb-20 pt-12 md:pt-24">
         <div className="grid items-end gap-12 md:grid-cols-12">
           <div className="md:col-span-7">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
-              className="chip mb-6"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              Civic infrastructure, in beta
-            </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -68,8 +59,8 @@ export default function LandingPage() {
             >
               You should too. OpenComment surfaces the proposed
               rules that affect your life, and helps you put a substantive
-              comment into the official record, in your own voice, in under a
-              minute.
+              comment into the official record, in your own voice, in a few
+              focused minutes.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -86,7 +77,7 @@ export default function LandingPage() {
               </Link>
               {!signedIn && (
                 <span className="text-sm text-muted">
-                  No account. No email. Stored on your device.
+                  Create a profile once. Edit or delete it anytime.
                 </span>
               )}
             </motion.div>
@@ -134,7 +125,7 @@ export default function LandingPage() {
               icon: ShieldCheck,
               title: "Tell us, in plain English, who you are.",
               body:
-                "Two minutes. State, occupation, household. The kind of context an agency reviewer would actually weigh.",
+                "Start with the basics, then add only the context you want us to use. The kind of detail an agency reviewer would actually weigh.",
             },
             {
               icon: FileText,

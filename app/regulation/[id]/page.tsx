@@ -106,7 +106,7 @@ export default function RegulationDetailPage() {
     };
   }, [reg]);
 
-  // "Why in your feed": personalized, not server-cached
+  // "Why in your feed": personalized and server-cached when configured.
   useEffect(() => {
     if (!reg || !profile) return;
     let cancelled = false;
@@ -223,7 +223,7 @@ export default function RegulationDetailPage() {
             </span>
             {reg.source === "mock" && (
               <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-rule px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted">
-                Curated demo entry
+                Example entry
               </span>
             )}
           </div>
@@ -429,7 +429,7 @@ export default function RegulationDetailPage() {
               <div className="mt-6 rounded-xl border border-dashed border-rule bg-cream-50/60 p-5 text-sm leading-relaxed text-ink-600">
                 <p>
                   <span className="font-medium text-ink">
-                    What to do with this:
+                    Next step:
                   </span>{" "}
                   Click <span className="text-accent">Copy comment</span>, then{" "}
                   <span className="text-accent">Open on regulations.gov</span>{" "}

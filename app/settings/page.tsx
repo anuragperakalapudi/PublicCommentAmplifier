@@ -14,7 +14,7 @@ const SECTIONS = [
     href: "/settings/profile",
     icon: User2,
     title: "Profile",
-    body: "Edit your demographics, occupation, state, and topic interests.",
+    body: "Edit your profile, states, topics, and optional matching context.",
   },
   {
     href: "/settings/email",
@@ -26,7 +26,7 @@ const SECTIONS = [
     href: "/settings/stories",
     icon: BookOpen,
     title: "Stories",
-    body: "Save short lived experiences that can ground comment drafts.",
+    body: "Save lived experiences for better matching and grounded drafts.",
   },
   {
     href: "/settings/privacy",

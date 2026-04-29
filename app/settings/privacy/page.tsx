@@ -44,6 +44,10 @@ export default function SettingsPrivacyPage() {
         saved: safeParse(window.localStorage.getItem("pca:saved:v1")),
         commented: safeParse(window.localStorage.getItem("pca:commented:v1")),
         emailPrefs: safeParse(window.localStorage.getItem("pca:emailPrefs:v1")),
+        stories: safeParse(window.localStorage.getItem("pca:stories:v1")),
+        rankingFeedback: safeParse(
+          window.localStorage.getItem("pca:ranking-feedback:v1"),
+        ),
       };
       const blob = new Blob([JSON.stringify(local, null, 2)], {
         type: "application/json",
@@ -69,6 +73,8 @@ export default function SettingsPrivacyPage() {
       window.localStorage.removeItem("pca:saved:v1");
       window.localStorage.removeItem("pca:commented:v1");
       window.localStorage.removeItem("pca:emailPrefs:v1");
+      window.localStorage.removeItem("pca:stories:v1");
+      window.localStorage.removeItem("pca:ranking-feedback:v1");
       await reset();
       router.replace("/");
     } finally {
@@ -120,6 +126,14 @@ export default function SettingsPrivacyPage() {
               value={profile.topics.join(", ") || "none"}
             />
             <Field
+              label="Additional states"
+              value={(profile.additionalStates ?? []).join(", ") || "none"}
+            />
+            <Field
+              label="Other context"
+              value={profile.freeTextContext ?? "none"}
+            />
+            <Field
               label="Member since"
               value={new Date(profile.createdAt).toLocaleDateString("en-US", {
                 month: "short",
@@ -144,7 +158,8 @@ export default function SettingsPrivacyPage() {
           <h2 className="font-display text-xl text-ink">Export</h2>
           <p className="mt-2 text-sm text-ink-600">
             Download everything we&rsquo;ve stored as a JSON file. Includes
-            profile, saved rules, commented rules, and email preferences.
+            profile, stories, saved rules, commented rules, feedback, cached
+            explanations, and email preferences.
           </p>
           <button
             type="button"
@@ -163,9 +178,10 @@ export default function SettingsPrivacyPage() {
             Delete account
           </h2>
           <p className="mt-2 text-sm text-ink-600">
-            Removes your profile, saved rules, commented rules, email
-            preferences, and your account from our auth provider. This action
-            is immediate and can&rsquo;t be undone.
+            Removes your profile, stories, saved rules, commented rules,
+            feedback, cached explanations, email preferences, and your account
+            from our auth provider. This action is immediate and can&rsquo;t be
+            undone.
           </p>
           {!confirmingDelete ? (
             <button

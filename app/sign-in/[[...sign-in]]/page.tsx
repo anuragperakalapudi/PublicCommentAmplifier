@@ -68,10 +68,11 @@ function NotConfiguredMessage() {
         Auth isn&rsquo;t configured yet.
       </p>
       <p className="mt-3">
-        OpenComment is currently running in localStorage-only mode. Profiles
-        are stored on this device. To enable real accounts, set the Clerk env
-        vars listed in <code className="font-mono text-xs">.env.local.example</code>{" "}
-        and restart the dev server.
+        Accounts are not connected in this environment. You can still try
+        onboarding with a profile stored on this device. To enable sign-in,
+        set the Clerk env vars listed in{" "}
+        <code className="font-mono text-xs">.env.local.example</code> and
+        restart the dev server.
       </p>
       <Link
         href="/onboarding"

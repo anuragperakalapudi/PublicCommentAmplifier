@@ -6,7 +6,7 @@ export const metadata = {
   description: "Terms of service for OpenComment.",
 };
 
-const LAST_UPDATED = "April 25, 2026";
+const LAST_UPDATED = "April 29, 2026";
 
 export default function TermsPage() {
   return (
@@ -103,7 +103,7 @@ export default function TermsPage() {
               <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
               <span>
                 Reverse-engineer or attempt to bypass our rate limits, abuse
-                detection, or LLM safety guardrails.
+                detection, or AI safety guardrails.
               </span>
             </li>
           </ul>
@@ -136,7 +136,7 @@ export default function TermsPage() {
         <section className="mt-10">
           <h2 className="font-display text-2xl text-ink">7. No warranty on outputs</h2>
           <p className="mt-3 text-base leading-relaxed text-ink-600">
-            Our LLM-drafted summaries and comments are starting points. They
+            Our AI-drafted summaries and comments are starting points. They
             may contain errors. You are responsible for reviewing what you
             submit. We make no representation that any draft accurately
             represents the rule, your situation, or any factual matter.

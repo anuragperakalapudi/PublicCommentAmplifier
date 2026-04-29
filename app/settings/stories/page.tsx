@@ -158,8 +158,8 @@ function StoryEditor({
           Cancel
         </button>
         {words > STORY_WORD_TARGET && (
-          <p className="text-xs text-accent">
-            Shorter stories are easier for the draft to use.
+            <p className="text-xs text-accent">
+              Shorter stories are easier to use in matching and drafts.
           </p>
         )}
       </div>
@@ -333,8 +333,8 @@ export default function SettingsStoriesPage() {
           <div>
             <h1 className="headline text-4xl">Stories</h1>
             <p className="mt-3 max-w-2xl text-base text-ink-600">
-              Save up to five short experiences that can ground future comment
-              drafts when the topic matches.
+              Save up to five short experiences that can improve matching and
+              ground future comment drafts.
             </p>
           </div>
           {!loading && !adding && stories.length < MAX_STORIES && (
@@ -385,8 +385,8 @@ export default function SettingsStoriesPage() {
             <div className="rounded-xl border border-rule bg-paper p-8 text-center">
               <p className="font-display text-2xl">No stories yet.</p>
               <p className="mt-2 text-sm text-ink-600">
-                Add one when there is a life experience you want the draft to
-                understand.
+                Add one when there is a life experience you want matching and
+                drafts to understand.
               </p>
             </div>
           ) : (

@@ -19,7 +19,7 @@ const isGeminiConfiguredClient =
   typeof process !== "undefined" &&
   // We can't read GEMINI_API_KEY on the client (server-only). Assume the
   // server is configured if the API responds 200; treat all non-2xx as
-  // "fall back to template."
+  // "show the fallback draft."
   true;
 
 export function GeneratedComment({
@@ -39,7 +39,7 @@ export function GeneratedComment({
   const [pasteback, setPasteback] = useState("");
 
   // Synchronous fallback always available so we can render something
-  // immediately while the LLM call is in flight.
+  // immediately while the AI draft is in flight.
   const fallbackText = useMemo(
     () => buildComment(reg, profile, variant),
     [reg, profile, variant],
@@ -48,7 +48,7 @@ export function GeneratedComment({
   const text = llmText ?? fallbackText;
   const words = commentWordCount(text);
 
-  // Fetch LLM draft on mount and when variant changes.
+  // Fetch AI draft on mount and when variant changes.
   useEffect(() => {
     if (!isGeminiConfiguredClient) return;
     let cancelled = false;
@@ -64,7 +64,7 @@ export function GeneratedComment({
       .then(async (r) => {
         if (cancelled) return;
         if (!r.ok) {
-          // 501 (not configured) or 500 (error): fall back to template silently.
+          // 501 (not configured) or 500 (error): fall back silently.
           setLlmText(null);
           setLlmFailed(r.status >= 500);
           setGenerating(false);
@@ -116,8 +116,8 @@ export function GeneratedComment({
           <Sparkles className="h-3.5 w-3.5" />
           {usingTemplate
             ? generating
-              ? "Drafting…"
-              : "Drafted for you (template)"
+              ? "Drafting..."
+              : "Draft ready"
             : "Drafted for you"}
         </div>
         <CopyButton text={text} />
@@ -166,7 +166,7 @@ export function GeneratedComment({
               <div className="skeleton h-4 w-full" />
               <div className="skeleton h-4 w-10/12" />
               <p className="pt-2 text-xs italic text-muted">
-                Anchoring to your profile…
+                Anchoring to your profile...
               </p>
             </motion.div>
           ) : (
@@ -203,8 +203,7 @@ export function GeneratedComment({
         <div className="flex items-start gap-2 rounded-lg border border-accent/40 bg-accent-50 p-3 text-xs text-ink-600">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent" />
           <span>
-            Heads up: this draft tripped our quality gate. Review carefully
-            before submitting. Flags:{" "}
+            Heads up: this draft needs extra review before submitting. Flags:{" "}
             <code className="font-mono text-[10px]">{llmFlags.join(", ")}</code>
           </span>
         </div>
@@ -212,7 +211,7 @@ export function GeneratedComment({
 
       {llmFailed && (
         <p className="text-xs italic text-muted">
-          LLM draft failed. Showing a template draft you can still edit.
+          Draft service had trouble. Showing a fallback draft you can still edit.
         </p>
       )}
 
@@ -248,7 +247,7 @@ export function GeneratedComment({
             <textarea
               value={pasteback}
               onChange={(e) => setPasteback(e.target.value)}
-              placeholder="Paste your final submitted text here (optional)…"
+              placeholder="Paste your final submitted text here (optional)..."
               className="w-full rounded-md border border-rule bg-cream-50 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
               rows={4}
             />

@@ -1,5 +1,6 @@
 "use client";
 
+import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 
@@ -38,8 +39,6 @@ export default function SignUpPage() {
 }
 
 function ClerkSignUp() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { SignUp } = require("@clerk/nextjs");
   return (
     <SignUp
       // After sign-up, send brand-new accounts straight to onboarding.

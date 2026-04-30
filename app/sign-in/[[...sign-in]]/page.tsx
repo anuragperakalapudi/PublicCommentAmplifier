@@ -1,5 +1,6 @@
 "use client";
 
+import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 
@@ -38,9 +39,6 @@ export default function SignInPage() {
 }
 
 function ClerkSignIn() {
-  // Dynamic import to avoid loading Clerk's bundle when keys aren't set.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { SignIn } = require("@clerk/nextjs");
   return (
     <SignIn
       // Returning users go to the feed. /feed will redirect to /onboarding

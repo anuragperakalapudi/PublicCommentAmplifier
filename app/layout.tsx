@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   title: "OpenComment · Be heard on the rules that affect you",
   description:
     "Federal agencies write thousands of rules a year. OpenComment helps ordinary Americans find the ones that affect them and speak into the record.",
+  icons: {
+    icon: [{ url: "/opencommentlogo.png", type: "image/png" }],
+    shortcut: [{ url: "/opencommentlogo.png", type: "image/png" }],
+    apple: [{ url: "/opencommentlogo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
